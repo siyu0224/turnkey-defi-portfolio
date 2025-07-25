@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import MessageSigningCard from "@/components/MessageSigningCard";
 
 interface WalletInfo {
   walletId: string;
@@ -90,12 +91,7 @@ export default function Dashboard() {
     }
   };
 
-  const signMessage = async () => {
-    if (!message.trim()) {
-      alert("Please enter a message to sign");
-      return;
-    }
-
+  const signMessage = async (messageToSign: string, scenario: string) => {
     if (!walletInfo) {
       alert("Please create a wallet first");
       return;
@@ -110,7 +106,7 @@ export default function Dashboard() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message,
+          message: messageToSign,
           walletId: walletInfo.walletId,
           address: walletInfo.address,
         }),
@@ -119,21 +115,21 @@ export default function Dashboard() {
       const data = await response.json();
       
       if (response.ok) {
-        // Add signing transaction
+        // Add signing transaction with scenario info
         const newTransaction: Transaction = {
           id: `tx-${Date.now()}`,
           type: 'sign',
-          amount: message.substring(0, 20) + '...',
-          token: 'MSG',
+          amount: `${scenario} signed`,
+          token: 'AUTH',
           timestamp: new Date().toISOString(),
           status: 'completed',
           signature: data.signature
         };
         setTransactions(prev => [newTransaction, ...prev]);
-        setMessage(""); // Clear the message input
       }
     } catch (error) {
       console.error("Error signing message:", error);
+      throw error; // Re-throw so the component can handle it
     } finally {
       setLoading(false);
     }
@@ -427,30 +423,10 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="text-md font-semibold text-gray-900 mb-4">Message Signing</h4>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Sign messages securely to prove ownership or authenticate with dApps
-                      </p>
-                      
-                      <div className="space-y-4">
-                        <textarea
-                          value={message}
-                          onChange={(e) => setMessage(e.target.value)}
-                          placeholder="Enter message to sign (e.g., 'Authenticate with MyDApp')"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          rows={3}
-                        />
-                        
-                        <button
-                          onClick={signMessage}
-                          disabled={loading || !message.trim()}
-                          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 py-2 rounded-md text-sm font-medium"
-                        >
-                          {loading ? "Signing..." : "🖋️ Sign Message"}
-                        </button>
-                      </div>
-                    </div>
+                    <MessageSigningCard 
+                      onSignMessage={signMessage}
+                      isLoading={loading}
+                    />
                   </div>
                 )}
               </div>

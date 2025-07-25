@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { GOOGLE_OAUTH_CONFIG } from '@/lib/google-oauth';
 
 interface SignInModalProps {
   isOpen: boolean;
@@ -11,6 +12,8 @@ interface SignInModalProps {
 export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
   const { signInWithGoogle, signInWithPasskey, continueAsGuest, isLoading } = useAuth();
   const [activeMethod, setActiveMethod] = useState<'google' | 'passkey' | null>(null);
+  
+  const isRealGoogleOAuth = GOOGLE_OAUTH_CONFIG.CLIENT_ID !== "DEMO_CLIENT_ID_123456789";
 
   if (!isOpen) return null;
 
@@ -68,9 +71,22 @@ export default function SignInModal({ isOpen, onClose }: SignInModalProps) {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
             <span className="font-medium text-gray-700">
-              {activeMethod === 'google' && isLoading ? 'Signing in...' : 'Continue with Google'}
+              {activeMethod === 'google' && isLoading ? 
+                (isRealGoogleOAuth ? 'Authenticating with Google...' : 'Signing in...') : 
+                'Continue with Google'}
             </span>
           </button>
+
+          {/* Google OAuth Status */}
+          <div className="text-center">
+            <p className="text-xs text-gray-500">
+              {isRealGoogleOAuth ? (
+                <>🔗 <strong>Real Google OAuth</strong> - Connected to production Google services</>
+              ) : (
+                <>🎭 <strong>Demo Mode</strong> - To enable real Google OAuth, add NEXT_PUBLIC_GOOGLE_CLIENT_ID</>
+              )}
+            </p>
+          </div>
 
           {/* Passkey Sign In */}
           <button

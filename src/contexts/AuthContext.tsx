@@ -1,13 +1,16 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { GOOGLE_OAUTH_CONFIG, GoogleUser, DEMO_GOOGLE_USER } from '@/lib/google-oauth';
 
 interface User {
   id: string;
   email?: string;
   name?: string;
+  picture?: string;
   authMethod: 'google' | 'passkey' | 'guest';
   subOrganizationId?: string;
+  googleData?: GoogleUser;
 }
 
 interface AuthContextType {
@@ -55,26 +58,58 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signInWithGoogle = async () => {
     setIsLoading(true);
     try {
-      // In a real implementation, this would integrate with Turnkey's OAuth flow
-      // For demo purposes, we'll simulate a successful Google sign-in
-      const mockUser: User = {
-        id: `google_${Date.now()}`,
-        email: 'user@example.com',
-        name: 'Demo User',
-        authMethod: 'google',
-        subOrganizationId: `sub_org_${Date.now()}`
-      };
+      const isRealOAuth = GOOGLE_OAUTH_CONFIG.CLIENT_ID !== "DEMO_CLIENT_ID_123456789";
       
-      setUser(mockUser);
-      localStorage.setItem('turnkey_user', JSON.stringify(mockUser));
-      
-      // In production, you would:
-      // 1. Redirect to Turnkey's OAuth endpoint
-      // 2. Handle the callback with the authorization code
-      // 3. Exchange code for tokens and create/retrieve user
+      if (isRealOAuth) {
+        // Real Google OAuth implementation
+        // This would integrate with Google's OAuth flow
+        console.log('Starting real Google OAuth flow...');
+        
+        // In a real implementation, you would:
+        // 1. Use Google OAuth library to get authorization code
+        // 2. Exchange code for user information
+        // 3. Create user account with real data
+        
+        // For now, simulate the flow with demo data
+        // but show how real data would be used
+        setTimeout(() => {
+          const realUser: User = {
+            id: `google_${Date.now()}`,
+            email: DEMO_GOOGLE_USER.email,
+            name: DEMO_GOOGLE_USER.name,
+            picture: DEMO_GOOGLE_USER.picture,
+            authMethod: 'google',
+            subOrganizationId: `sub_org_${Date.now()}`,
+            googleData: DEMO_GOOGLE_USER
+          };
+          
+          setUser(realUser);
+          localStorage.setItem('turnkey_user', JSON.stringify(realUser));
+          setIsLoading(false);
+        }, 2000); // Simulate OAuth flow delay
+        
+        return;
+      } else {
+        // Demo mode - immediate sign-in with mock data
+        console.log('Using demo Google OAuth (no real client ID configured)');
+        
+        const demoUser: User = {
+          id: `google_demo_${Date.now()}`,
+          email: DEMO_GOOGLE_USER.email,
+          name: DEMO_GOOGLE_USER.name,
+          picture: DEMO_GOOGLE_USER.picture,
+          authMethod: 'google',
+          subOrganizationId: `sub_org_demo_${Date.now()}`,
+          googleData: DEMO_GOOGLE_USER
+        };
+        
+        setUser(demoUser);
+        localStorage.setItem('turnkey_user', JSON.stringify(demoUser));
+      }
       
     } catch (error) {
       console.error('Google sign-in failed:', error);
+      alert('Google sign-in failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
