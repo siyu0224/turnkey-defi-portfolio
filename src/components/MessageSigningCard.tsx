@@ -108,7 +108,7 @@ export default function MessageSigningCard({ onSignMessage, isLoading }: Message
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Real-World Message Signing</h3>
         <p className="text-sm text-gray-600 mb-6">
-          Choose a scenario where you'd actually need to sign a message to interact with DeFi protocols, 
+          Choose a scenario where you&apos;d actually need to sign a message to interact with DeFi protocols, 
           claim rewards, or verify ownership.
         </p>
       </div>
@@ -153,7 +153,7 @@ export default function MessageSigningCard({ onSignMessage, isLoading }: Message
             
             {!signatures[scenario.id] && (
               <div className="mt-2 text-xs text-gray-500">
-                <strong>Will sign:</strong> "{scenario.message.replace('{{timestamp}}', 'current time').replace('{{address}}', 'your wallet')}"
+                <strong>Will sign:</strong> &quot;{scenario.message.replace('{{timestamp}}', 'current time').replace('{{address}}', 'your wallet')}&quot;
               </div>
             )}
           </div>

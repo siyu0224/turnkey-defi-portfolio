@@ -35,7 +35,6 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'portfolio' | 'transactions' | 'settings'>('portfolio');
   const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
   // Mock portfolio data
