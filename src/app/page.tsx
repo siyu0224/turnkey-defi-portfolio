@@ -152,7 +152,7 @@ export default function Home() {
         <div className="mt-16 bg-gray-900 rounded-2xl p-8 text-center">
           <div className="max-w-3xl mx-auto">
             <h3 className="text-2xl font-bold text-white mb-4">
-              🎯 Demo Application
+              🎯 Demo Application - v2.0
             </h3>
             <p className="text-gray-300 mb-6">
               This is a proof-of-concept application showcasing Turnkey&apos;s embedded wallet capabilities. 
