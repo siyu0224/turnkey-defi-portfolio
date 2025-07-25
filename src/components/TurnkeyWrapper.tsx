@@ -20,12 +20,10 @@ export default function TurnkeyWrapper({
     <TurnkeyProvider
       config={{
         apiBaseUrl,
-        serverSignUrl: "/api/sign",
         defaultOrganizationId: organizationId,
-        // Authentication configuration
-        rpId: process.env.NEXT_PUBLIC_DOMAIN || (typeof window !== 'undefined' ? window.location.hostname : "localhost"),
-        // Optional: iframe URL for legacy authentication (if needed)
-        iframeUrl: process.env.NEXT_PUBLIC_IFRAME_URL,
+        rpId: typeof window !== 'undefined' ? window.location.hostname : "localhost",
+        iframeUrl: "https://auth.turnkey.com",
+        serverSignUrl: "/api/sign",
       }}
     >
       {children}

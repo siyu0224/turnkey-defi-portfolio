@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from 'react';
+import { Auth } from '@turnkey/sdk-react';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuth } from '@/contexts/AuthContext';
-import FallbackAuth from './FallbackAuth';
 
 interface UserFriendlyAuthModalProps {
   isOpen: boolean;
@@ -23,6 +23,16 @@ export default function UserFriendlyAuthModal({
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [showAuthComponent, setShowAuthComponent] = useState(false);
   const { refreshSession } = useAuth();
+  
+  const authConfig = {
+    emailEnabled: true,
+    passkeyEnabled: true,
+    phoneEnabled: true,
+    walletEnabled: false,
+    appleEnabled: false,
+    facebookEnabled: false,
+    googleEnabled: false,
+  };
   
   const handleAuthSuccess = async () => {
     console.log('Authentication successful');
@@ -80,10 +90,25 @@ export default function UserFriendlyAuthModal({
               </h2>
             </div>
             
-            <FallbackAuth
-              onSuccess={handleAuthSuccess}
-              onError={handleAuthError}
-            />
+            <div className="space-y-4">
+              <Auth
+                authConfig={authConfig}
+                configOrder={['passkey', 'email', 'phone']}
+                onAuthSuccess={handleAuthSuccess}
+                onError={handleAuthError}
+              />
+            </div>
+            
+            {/* Debug Information */}
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+              <div className="font-semibold mb-1">Debug Info:</div>
+              <div>Organization ID: {process.env.NEXT_PUBLIC_ORGANIZATION_ID ? '✓ Set' : '✗ Missing'}</div>
+              <div>Environment: {process.env.NODE_ENV}</div>
+              <div>API Base URL: {process.env.NEXT_PUBLIC_BASE_URL || 'https://api.turnkey.com'}</div>
+              <div className="mt-2 text-xs text-gray-500">
+                Using real Turnkey authentication infrastructure
+              </div>
+            </div>
           </div>
         </div>
       </div>
