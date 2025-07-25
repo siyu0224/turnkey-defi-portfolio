@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Turnkey } from '@turnkey/http';
-import { ApiKeyStamper } from '@turnkey/api-key-stamper';
+// import { Turnkey } from '@turnkey/http';
+// import { ApiKeyStamper } from '@turnkey/api-key-stamper';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -22,15 +22,18 @@ export async function GET(request: NextRequest) {
   
   try {
     // Initialize Turnkey client
-    const stamper = new ApiKeyStamper({
-      apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
-      apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY!,
-    });
+    // TODO: Implement actual OAuth exchange with Turnkey
+    // This would require the correct Turnkey OAuth API
     
-    const turnkeyClient = new Turnkey({
-      apiBaseUrl: process.env.TURNKEY_API_BASE_URL!,
-      stamper,
-    });
+    // const stamper = new ApiKeyStamper({
+    //   apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
+    //   apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY!,
+    // });
+    
+    // const turnkeyClient = new Turnkey({
+    //   apiBaseUrl: process.env.TURNKEY_API_BASE_URL!,
+    //   stamper,
+    // });
     
     // Exchange OAuth code for Turnkey authentication
     // The specific implementation depends on Turnkey's OAuth flow

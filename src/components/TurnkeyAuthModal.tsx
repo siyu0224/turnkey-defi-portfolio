@@ -149,7 +149,7 @@ export default function TurnkeyAuthModal({
     "passkey"  // Passkey/WebAuthn authentication
   ];
   
-  const handleAuthSuccess = async (authData: any) => {
+  const handleAuthSuccess = async (authData: unknown) => {
     setIsLoading(false);
     console.log('Authentication successful:', authData);
     
@@ -188,7 +188,7 @@ export default function TurnkeyAuthModal({
     
     setIsLoading(true);
     try {
-      await completeRecovery(recoveryCode, null);
+      await completeRecovery(recoveryCode);
       await refreshSession();
       onAuthSuccess?.();
       onClose();

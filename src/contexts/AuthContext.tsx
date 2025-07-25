@@ -31,7 +31,7 @@ interface AuthContextType {
   unlinkAccount: (provider: string) => Promise<void>;
   setupRecovery: (method: 'email' | 'phone') => Promise<void>;
   initiateRecovery: (identifier: string) => Promise<void>;
-  completeRecovery: (code: string, newCredential: any) => Promise<void>;
+  completeRecovery: (code: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,12 +54,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const { getActiveClient, indexedDbClient, turnkey } = useTurnkey();
 
   useEffect(() => {
-    checkAuthStatus();
+    const checkStatus = async () => {
+      await checkAuthStatus();
+    };
+    
+    checkStatus();
     
     // Set up session monitoring
-    const interval = setInterval(checkAuthStatus, 30000); // Check every 30 seconds
+    const interval = setInterval(checkStatus, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [getActiveClient, indexedDbClient, turnkey]);
   
   const checkAuthStatus = async () => {
     setIsLoading(true);
@@ -115,7 +119,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Helper functions to extract user data from Turnkey responses
-  const extractNameFromProviders = (providers: any[]): string | undefined => {
+  const extractNameFromProviders = (providers: Array<{claims?: {name?: string; given_name?: string; family_name?: string}}>): string | undefined => {
     for (const provider of providers || []) {
       if (provider.claims?.name) return provider.claims.name;
       if (provider.claims?.given_name && provider.claims?.family_name) {
@@ -125,7 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return undefined;
   };
   
-  const extractPictureFromProviders = (providers: any[]): string | undefined => {
+  const extractPictureFromProviders = (providers: Array<{claims?: {picture?: string; avatar_url?: string}}>): string | undefined => {
     for (const provider of providers || []) {
       if (provider.claims?.picture) return provider.claims.picture;
       if (provider.claims?.avatar_url) return provider.claims.avatar_url;
@@ -133,7 +137,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return undefined;
   };
   
-  const extractPhoneFromAuthenticators = (authenticators: any[]): string | undefined => {
+  const extractPhoneFromAuthenticators = (authenticators: Array<{authenticatorName: string; phoneNumber?: string}>): string | undefined => {
     for (const auth of authenticators || []) {
       if (auth.authenticatorName.includes('PHONE') && auth.phoneNumber) {
         return auth.phoneNumber;
@@ -142,7 +146,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return undefined;
   };
   
-  const determineAuthMethod = (authenticators: any[], providers: any[]): User['authMethod'] => {
+  const determineAuthMethod = (authenticators: Array<{authenticatorName: string}>, providers: Array<{providerName?: string}>): User['authMethod'] => {
     // Check OAuth providers first
     for (const provider of providers || []) {
       const providerType = provider.providerName?.toLowerCase();
@@ -168,7 +172,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return 'email'; // Default fallback
   };
   
-  const extractRecoveryMethods = (authenticators: any[]): string[] => {
+  const extractRecoveryMethods = (authenticators: Array<{authenticatorName: string}>): string[] => {
     const methods: string[] = [];
     for (const auth of authenticators || []) {
       if (auth.authenticatorName.includes('EMAIL_RECOVERY')) methods.push('email');
@@ -177,7 +181,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return methods;
   };
   
-  const checkEmailVerification = (providers: any[], authenticators: any[]): boolean => {
+  const checkEmailVerification = (providers: Array<{claims?: {email_verified?: boolean}}>, authenticators: Array<{authenticatorName: string; isVerified?: boolean}>): boolean => {
     // Check if email is verified in OAuth providers
     for (const provider of providers || []) {
       if (provider.claims?.email_verified === true) return true;
@@ -191,14 +195,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return false;
   };
   
-  const checkPhoneVerification = (authenticators: any[]): boolean => {
+  const checkPhoneVerification = (authenticators: Array<{authenticatorName: string; isVerified?: boolean}>): boolean => {
     for (const auth of authenticators || []) {
       if (auth.authenticatorName.includes('PHONE') && auth.isVerified) return true;
     }
     return false;
   };
   
-  const extractLinkedAccounts = (providers: any[]): { provider: string; email?: string; }[] => {
+  const extractLinkedAccounts = (providers: Array<{providerName: string; claims?: {email?: string}}>): { provider: string; email?: string; }[] => {
     return (providers || []).map(provider => ({
       provider: provider.providerName,
       email: provider.claims?.email,
@@ -335,7 +339,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
   
-  const completeRecovery = async (code: string, newCredential: any): Promise<void> => {
+  const completeRecovery = async (code: string): Promise<void> => {
     try {
       // Complete the recovery process with the OTP code
       // and establish a new authentication credential
