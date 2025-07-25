@@ -9,6 +9,8 @@ export async function POST(request: NextRequest) {
     console.log("Creating wallet with name:", walletName);
     console.log("Organization ID:", process.env.NEXT_PUBLIC_ORGANIZATION_ID);
     console.log("Base URL:", process.env.NEXT_PUBLIC_BASE_URL);
+    console.log("Public key loaded:", !!process.env.TURNKEY_API_PUBLIC_KEY);
+    console.log("Private key loaded:", !!process.env.TURNKEY_API_PRIVATE_KEY);
 
     const stamper = new ApiKeyStamper({
       apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
