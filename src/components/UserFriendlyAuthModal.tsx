@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { Auth } from '@turnkey/sdk-react';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuth } from '@/contexts/AuthContext';
+import FallbackAuth from './FallbackAuth';
 
 interface UserFriendlyAuthModalProps {
   isOpen: boolean;
@@ -24,21 +24,6 @@ export default function UserFriendlyAuthModal({
   const [showAuthComponent, setShowAuthComponent] = useState(false);
   const { refreshSession } = useAuth();
   
-  const authConfig = {
-    emailEnabled: true,
-    passkeyEnabled: true,
-    phoneEnabled: true,
-    walletEnabled: false,
-    googleEnabled: !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-    appleEnabled: !!process.env.NEXT_PUBLIC_APPLE_CLIENT_ID,
-    facebookEnabled: !!process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID,
-    openOAuthInPage: false,
-    otpConfig: {
-      alphanumeric: false,
-      otpLength: 6,
-    },
-  };
-  
   const handleAuthSuccess = async () => {
     console.log('Authentication successful');
     await refreshSession();
@@ -51,7 +36,7 @@ export default function UserFriendlyAuthModal({
     console.error('Authentication error:', errorMessage);
   };
   
-  const handleGoogleSuccess = (credentialResponse: any) => {
+  const handleGoogleSuccess = (credentialResponse: { credential?: string }) => {
     console.log('Google OAuth Success:', credentialResponse);
     // TODO: Create Turnkey sub-organization with Google OAuth token
     // For now, just proceed to success
@@ -95,10 +80,8 @@ export default function UserFriendlyAuthModal({
               </h2>
             </div>
             
-            <Auth
-              authConfig={authConfig}
-              configOrder={["passkey", "email", "phone", "socials"]}
-              onAuthSuccess={handleAuthSuccess}
+            <FallbackAuth
+              onSuccess={handleAuthSuccess}
               onError={handleAuthError}
             />
           </div>
