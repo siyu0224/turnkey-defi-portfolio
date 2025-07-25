@@ -47,7 +47,6 @@ const nextConfig: NextConfig = {
 
   // Experimental features for better performance
   experimental: {
-    optimizeCss: true,
     // Enable if you want to try App Router optimizations
     // serverComponentsExternalPackages: ['@turnkey/http'],
   },
