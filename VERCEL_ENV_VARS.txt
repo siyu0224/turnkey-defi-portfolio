@@ -1,0 +1,15 @@
+# Copy these EXACT values to Vercel Environment Variables
+# Go to: Vercel Dashboard → Settings → Environment Variables
+
+TURNKEY_API_BASE_URL=https://api.turnkey.com
+TURNKEY_API_PRIVATE_KEY=aa523e11f9977bdd39a234a99bb560a0ff3fe219070f3b5dbf3426d5513bb1c2
+TURNKEY_API_PUBLIC_KEY=02f9d7453e429c2c4b934ed98785922597ce195bb51859f53d3d67a4214f5f6e95
+TURNKEY_ORGANIZATION_ID=788ffa6a-6b0f-4df4-bd3a-92db5ec86678
+NEXT_PUBLIC_APP_URL=https://turnkey-defi-portfolio.vercel.app
+NEXT_PUBLIC_DOMAIN=turnkey-defi-portfolio.vercel.app
+NEXT_PUBLIC_ORGANIZATION_ID=788ffa6a-6b0f-4df4-bd3a-92db5ec86678
+NEXT_PUBLIC_OAUTH_REDIRECT_URI=https://turnkey-defi-portfolio.vercel.app/auth/callback
+NEXT_PUBLIC_RECOVERY_ENABLED=true
+NEXT_PUBLIC_ACCOUNT_LINKING_ENABLED=true
+NEXT_PUBLIC_MULTI_FACTOR_ENABLED=true
+NEXT_PUBLIC_EMAIL_FROM_NAME=DeFi Portfolio

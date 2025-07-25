@@ -36,6 +36,7 @@ export default function TurnkeyAuthModal({
     emailEnabled: true,
     passkeyEnabled: true,
     phoneEnabled: true,
+    walletEnabled: false, // Wallet-based authentication (MetaMask, etc.)
     
     // Enable ALL social OAuth providers
     googleEnabled: !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,

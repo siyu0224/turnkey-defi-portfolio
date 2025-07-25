@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useTurnkey } from '@turnkey/sdk-react';
 
 interface User {
@@ -52,20 +52,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { getActiveClient, indexedDbClient, turnkey } = useTurnkey();
-
-  useEffect(() => {
-    const checkStatus = async () => {
-      await checkAuthStatus();
-    };
-    
-    checkStatus();
-    
-    // Set up session monitoring
-    const interval = setInterval(checkStatus, 30000); // Check every 30 seconds
-    return () => clearInterval(interval);
-  }, [getActiveClient, indexedDbClient, turnkey]);
   
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     setIsLoading(true);
     try {
       await indexedDbClient?.init();
@@ -116,7 +104,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [getActiveClient, indexedDbClient, turnkey]);
+
+  useEffect(() => {
+    checkAuthStatus();
+    
+    // Set up session monitoring
+    const interval = setInterval(checkAuthStatus, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [checkAuthStatus]);
 
   // Helper functions to extract user data from Turnkey responses
   const extractNameFromProviders = (providers: Array<{claims?: {name?: string; given_name?: string; family_name?: string}}>): string | undefined => {
