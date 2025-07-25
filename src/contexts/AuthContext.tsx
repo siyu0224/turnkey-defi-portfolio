@@ -1,26 +1,37 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { GOOGLE_OAUTH_CONFIG, GoogleUser, DEMO_GOOGLE_USER } from '@/lib/google-oauth';
+import { useTurnkey } from '@turnkey/sdk-react';
 
 interface User {
   id: string;
   email?: string;
   name?: string;
   picture?: string;
-  authMethod: 'google' | 'passkey' | 'guest';
+  phone?: string;
+  authMethod: 'google' | 'apple' | 'facebook' | 'microsoft' | 'discord' | 'twitter' | 'github' | 'auth0' | 'cognito' | 'okta' | 'email' | 'phone' | 'passkey';
   subOrganizationId?: string;
-  googleData?: GoogleUser;
+  authenticators?: string[];
+  oauthProviders?: string[];
+  sessionExpires?: Date;
+  recoveryMethods?: string[];
+  isEmailVerified?: boolean;
+  isPhoneVerified?: boolean;
+  linkedAccounts?: { provider: string; email?: string; }[];
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signInWithPasskey: () => Promise<void>;
-  signOut: () => void;
-  continueAsGuest: () => void;
+  signOut: () => Promise<void>;
+  refreshSession: () => Promise<void>;
+  getAuthMethods: () => Promise<string[]>;
+  linkAccount: (provider: string) => Promise<void>;
+  unlinkAccount: (provider: string) => Promise<void>;
+  setupRecovery: (method: 'email' | 'phone') => Promise<void>;
+  initiateRecovery: (identifier: string) => Promise<void>;
+  completeRecovery: (code: string, newCredential: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,213 +51,332 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { getActiveClient, indexedDbClient, turnkey } = useTurnkey();
 
   useEffect(() => {
-    // Check for existing authentication on mount
-    const savedUser = localStorage.getItem('turnkey_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Error parsing saved user:', error);
-        localStorage.removeItem('turnkey_user');
-      }
-    }
-    setIsLoading(false);
-  }, []);
-
-  const signInWithGoogle = async () => {
-    setIsLoading(true);
-    try {
-      const isRealOAuth = GOOGLE_OAUTH_CONFIG.CLIENT_ID !== "DEMO_CLIENT_ID_123456789";
-      
-      if (isRealOAuth) {
-        // Real Google OAuth implementation
-        // This would integrate with Google's OAuth flow
-        console.log('Starting real Google OAuth flow...');
-        
-        // In a real implementation, you would:
-        // 1. Use Google OAuth library to get authorization code
-        // 2. Exchange code for user information
-        // 3. Create user account with real data
-        
-        // For now, simulate the flow with demo data
-        // but show how real data would be used
-        setTimeout(() => {
-          const realUser: User = {
-            id: `google_${Date.now()}`,
-            email: DEMO_GOOGLE_USER.email,
-            name: DEMO_GOOGLE_USER.name,
-            picture: DEMO_GOOGLE_USER.picture,
-            authMethod: 'google',
-            subOrganizationId: `sub_org_${Date.now()}`,
-            googleData: DEMO_GOOGLE_USER
-          };
-          
-          setUser(realUser);
-          localStorage.setItem('turnkey_user', JSON.stringify(realUser));
-          setIsLoading(false);
-        }, 2000); // Simulate OAuth flow delay
-        
-        return;
-      } else {
-        // Demo mode - immediate sign-in with mock data
-        console.log('Using demo Google OAuth (no real client ID configured)');
-        
-        const demoUser: User = {
-          id: `google_demo_${Date.now()}`,
-          email: DEMO_GOOGLE_USER.email,
-          name: DEMO_GOOGLE_USER.name,
-          picture: DEMO_GOOGLE_USER.picture,
-          authMethod: 'google',
-          subOrganizationId: `sub_org_demo_${Date.now()}`,
-          googleData: DEMO_GOOGLE_USER
-        };
-        
-        setUser(demoUser);
-        localStorage.setItem('turnkey_user', JSON.stringify(demoUser));
-      }
-      
-    } catch (error) {
-      console.error('Google sign-in failed:', error);
-      alert('Google sign-in failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signInWithPasskey = async () => {
-    setIsLoading(true);
-    try {
-      // Check if WebAuthn is supported
-      if (!window.PublicKeyCredential) {
-        throw new Error('Passkeys are not supported in this browser');
-      }
-
-      // First, try to authenticate with existing passkey
-      try {
-        const credential = await navigator.credentials.get({
-          publicKey: {
-            challenge: new Uint8Array(32), // In production, get from server
-            timeout: 60000,
-            allowCredentials: [], // Empty array allows any passkey for this domain
-            userVerification: 'preferred'
-          }
-        }) as PublicKeyCredential;
-
-        if (credential) {
-          // Successful authentication with existing passkey
-          const authenticatorData = new Uint8Array((credential.response as AuthenticatorAssertionResponse).authenticatorData);
-          const credentialId = Array.from(new Uint8Array(credential.rawId))
-            .map(byte => byte.toString(16).padStart(2, '0'))
-            .join('');
-
-          const passkeyUser: User = {
-            id: `passkey_${credentialId.slice(0, 16)}`,
-            name: 'Passkey User',
-            authMethod: 'passkey',
-            subOrganizationId: `sub_org_${Date.now()}`
-          };
-          
-          setUser(passkeyUser);
-          localStorage.setItem('turnkey_user', JSON.stringify(passkeyUser));
-          return;
-        }
-      } catch (authError) {
-        console.log('No existing passkey found, will try to register new one...');
-      }
-
-      // If authentication failed, try to register a new passkey
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge: new Uint8Array(32), // In production, get from server
-          rp: {
-            name: "DeFi Portfolio",
-            id: window.location.hostname,
-          },
-          user: {
-            id: new TextEncoder().encode(`user_${Date.now()}`),
-            name: "demo@example.com",
-            displayName: "Demo User",
-          },
-          pubKeyCredParams: [
-            { alg: -7, type: "public-key" }, // ES256
-            { alg: -257, type: "public-key" } // RS256
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform",
-            userVerification: "preferred",
-            residentKey: "preferred"
-          },
-          timeout: 60000,
-          attestation: "direct"
-        }
-      }) as PublicKeyCredential;
-
-      if (credential) {
-        const credentialId = Array.from(new Uint8Array(credential.rawId))
-          .map(byte => byte.toString(16).padStart(2, '0'))
-          .join('');
-
-        const passkeyUser: User = {
-          id: `passkey_${credentialId.slice(0, 16)}`,
-          name: 'Passkey User',
-          authMethod: 'passkey',
-          subOrganizationId: `sub_org_${Date.now()}`
-        };
-        
-        setUser(passkeyUser);
-        localStorage.setItem('turnkey_user', JSON.stringify(passkeyUser));
-      }
-      
-    } catch (error) {
-      console.error('Passkey operation failed:', error);
-      let errorMessage = 'Passkey authentication failed. ';
-      
-      if (error instanceof Error) {
-        if (error.name === 'NotSupportedError') {
-          errorMessage += 'Passkeys are not supported on this device/browser.';
-        } else if (error.name === 'SecurityError') {
-          errorMessage += 'Security error - make sure you\'re on HTTPS.';
-        } else if (error.name === 'NotAllowedError') {
-          errorMessage += 'Operation was cancelled or not allowed.';
-        } else if (error.name === 'InvalidStateError') {
-          errorMessage += 'A passkey is already registered for this device.';
-        } else {
-          errorMessage += error.message;
-        }
-      }
-      
-      alert(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const continueAsGuest = () => {
-    const guestUser: User = {
-      id: `guest_${Date.now()}`,
-      name: 'Guest User',
-      authMethod: 'guest'
-    };
+    checkAuthStatus();
     
-    setUser(guestUser);
-    localStorage.setItem('turnkey_user', JSON.stringify(guestUser));
+    // Set up session monitoring
+    const interval = setInterval(checkAuthStatus, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+  
+  const checkAuthStatus = async () => {
+    setIsLoading(true);
+    try {
+      await indexedDbClient?.init();
+      const client = await getActiveClient();
+      
+      if (client && turnkey) {
+        // Get comprehensive user information from Turnkey
+        const whoami = await client.getWhoami({
+          organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+        });
+        
+        // Get user's authenticators and OAuth providers
+        const authenticators = await client.getAuthenticators({
+          organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+          userId: whoami.userId,
+        });
+        
+        const oAuthProviders = await client.getOauthProviders({
+          organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+          userId: whoami.userId,
+        });
+        
+        // Extract user data from Turnkey response
+        const userData: User = {
+          id: whoami.userId || whoami.organizationId,
+          email: whoami.email,
+          name: whoami.username || extractNameFromProviders(oAuthProviders.oauthProviders),
+          picture: extractPictureFromProviders(oAuthProviders.oauthProviders),
+          phone: extractPhoneFromAuthenticators(authenticators.authenticators),
+          authMethod: determineAuthMethod(authenticators.authenticators, oAuthProviders.oauthProviders),
+          subOrganizationId: whoami.organizationId,
+          authenticators: authenticators.authenticators?.map(auth => auth.authenticatorName) || [],
+          oauthProviders: oAuthProviders.oauthProviders?.map(provider => provider.providerName) || [],
+          sessionExpires: new Date(Date.now() + (3600 * 1000)), // 1 hour from now
+          recoveryMethods: extractRecoveryMethods(authenticators.authenticators),
+          isEmailVerified: checkEmailVerification(oAuthProviders.oauthProviders, authenticators.authenticators),
+          isPhoneVerified: checkPhoneVerification(authenticators.authenticators),
+          linkedAccounts: extractLinkedAccounts(oAuthProviders.oauthProviders),
+        };
+        
+        setUser(userData);
+      } else {
+        setUser(null);
+      }
+    } catch (error) {
+      console.log('No active session found:', error);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const signOut = () => {
-    setUser(null);
-    localStorage.removeItem('turnkey_user');
+  // Helper functions to extract user data from Turnkey responses
+  const extractNameFromProviders = (providers: any[]): string | undefined => {
+    for (const provider of providers || []) {
+      if (provider.claims?.name) return provider.claims.name;
+      if (provider.claims?.given_name && provider.claims?.family_name) {
+        return `${provider.claims.given_name} ${provider.claims.family_name}`;
+      }
+    }
+    return undefined;
+  };
+  
+  const extractPictureFromProviders = (providers: any[]): string | undefined => {
+    for (const provider of providers || []) {
+      if (provider.claims?.picture) return provider.claims.picture;
+      if (provider.claims?.avatar_url) return provider.claims.avatar_url;
+    }
+    return undefined;
+  };
+  
+  const extractPhoneFromAuthenticators = (authenticators: any[]): string | undefined => {
+    for (const auth of authenticators || []) {
+      if (auth.authenticatorName.includes('PHONE') && auth.phoneNumber) {
+        return auth.phoneNumber;
+      }
+    }
+    return undefined;
+  };
+  
+  const determineAuthMethod = (authenticators: any[], providers: any[]): User['authMethod'] => {
+    // Check OAuth providers first
+    for (const provider of providers || []) {
+      const providerType = provider.providerName?.toLowerCase();
+      if (providerType?.includes('google')) return 'google';
+      if (providerType?.includes('apple')) return 'apple';
+      if (providerType?.includes('facebook')) return 'facebook';
+      if (providerType?.includes('microsoft')) return 'microsoft';
+      if (providerType?.includes('discord')) return 'discord';
+      if (providerType?.includes('twitter')) return 'twitter';
+      if (providerType?.includes('github')) return 'github';
+      if (providerType?.includes('auth0')) return 'auth0';
+      if (providerType?.includes('cognito')) return 'cognito';
+      if (providerType?.includes('okta')) return 'okta';
+    }
+    
+    // Check authenticators
+    for (const auth of authenticators || []) {
+      if (auth.authenticatorName.includes('PASSKEY')) return 'passkey';
+      if (auth.authenticatorName.includes('PHONE')) return 'phone';
+      if (auth.authenticatorName.includes('EMAIL')) return 'email';
+    }
+    
+    return 'email'; // Default fallback
+  };
+  
+  const extractRecoveryMethods = (authenticators: any[]): string[] => {
+    const methods: string[] = [];
+    for (const auth of authenticators || []) {
+      if (auth.authenticatorName.includes('EMAIL_RECOVERY')) methods.push('email');
+      if (auth.authenticatorName.includes('PHONE_RECOVERY')) methods.push('phone');
+    }
+    return methods;
+  };
+  
+  const checkEmailVerification = (providers: any[], authenticators: any[]): boolean => {
+    // Check if email is verified in OAuth providers
+    for (const provider of providers || []) {
+      if (provider.claims?.email_verified === true) return true;
+    }
+    
+    // Check if email authenticator exists
+    for (const auth of authenticators || []) {
+      if (auth.authenticatorName.includes('EMAIL') && auth.isVerified) return true;
+    }
+    
+    return false;
+  };
+  
+  const checkPhoneVerification = (authenticators: any[]): boolean => {
+    for (const auth of authenticators || []) {
+      if (auth.authenticatorName.includes('PHONE') && auth.isVerified) return true;
+    }
+    return false;
+  };
+  
+  const extractLinkedAccounts = (providers: any[]): { provider: string; email?: string; }[] => {
+    return (providers || []).map(provider => ({
+      provider: provider.providerName,
+      email: provider.claims?.email,
+    }));
+  };
+
+  // Authentication and account management functions
+  const getAuthMethods = async (): Promise<string[]> => {
+    try {
+      const client = await getActiveClient();
+      if (!client || !user) return [];
+      
+      const authenticators = await client.getAuthenticators({
+        organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+        userId: user.id,
+      });
+      
+      const oAuthProviders = await client.getOauthProviders({
+        organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+        userId: user.id,
+      });
+      
+      const methods = [
+        ...authenticators.authenticators?.map(auth => auth.authenticatorName) || [],
+        ...oAuthProviders.oauthProviders?.map(provider => provider.providerName) || [],
+      ];
+      
+      return methods;
+    } catch (error) {
+      console.error('Error getting auth methods:', error);
+      return [];
+    }
+  };
+  
+  const linkAccount = async (provider: string): Promise<void> => {
+    try {
+      const client = await getActiveClient();
+      if (!client || !user) throw new Error('Not authenticated');
+      
+      // This would initiate OAuth flow for account linking
+      // Exact implementation depends on Turnkey's OAuth linking API
+      await client.createOauthProvider({
+        organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+        userId: user.id,
+        oauthProvider: {
+          providerName: provider,
+          // Additional OAuth configuration
+        }
+      });
+      
+      await checkAuthStatus(); // Refresh user data
+    } catch (error) {
+      console.error('Error linking account:', error);
+      throw error;
+    }
+  };
+  
+  const unlinkAccount = async (provider: string): Promise<void> => {
+    try {
+      const client = await getActiveClient();
+      if (!client || !user) throw new Error('Not authenticated');
+      
+      // Find the provider to unlink
+      const oAuthProviders = await client.getOauthProviders({
+        organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+        userId: user.id,
+      });
+      
+      const providerToUnlink = oAuthProviders.oauthProviders?.find(
+        p => p.providerName === provider
+      );
+      
+      if (providerToUnlink) {
+        await client.deleteOauthProvider({
+          organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+          oauthProviderId: providerToUnlink.oauthProviderId,
+        });
+      }
+      
+      await checkAuthStatus(); // Refresh user data
+    } catch (error) {
+      console.error('Error unlinking account:', error);
+      throw error;
+    }
+  };
+  
+  const setupRecovery = async (method: 'email' | 'phone'): Promise<void> => {
+    try {
+      const client = await getActiveClient();
+      if (!client || !user) throw new Error('Not authenticated');
+      
+      if (method === 'email') {
+        // Setup email recovery
+        await client.createAuthenticator({
+          organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+          userId: user.id,
+          authenticatorName: `EMAIL_RECOVERY_${Date.now()}`,
+          challenge: '', // Challenge from server
+          attestation: {
+            // Email recovery attestation
+          }
+        });
+      } else {
+        // Setup phone recovery
+        await client.createAuthenticator({
+          organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+          userId: user.id,
+          authenticatorName: `PHONE_RECOVERY_${Date.now()}`,
+          challenge: '', // Challenge from server
+          attestation: {
+            // Phone recovery attestation
+          }
+        });
+      }
+      
+      await checkAuthStatus(); // Refresh user data
+    } catch (error) {
+      console.error('Error setting up recovery:', error);
+      throw error;
+    }
+  };
+  
+  const initiateRecovery = async (identifier: string): Promise<void> => {
+    try {
+      // This would typically be handled by Turnkey's recovery flow
+      // Send recovery code to email or phone
+      console.log('Initiating recovery for:', identifier);
+      
+      // In a real implementation, this would call Turnkey's recovery API
+      // which sends an OTP to the provided email or phone number
+    } catch (error) {
+      console.error('Error initiating recovery:', error);
+      throw error;
+    }
+  };
+  
+  const completeRecovery = async (code: string, newCredential: any): Promise<void> => {
+    try {
+      // Complete the recovery process with the OTP code
+      // and establish a new authentication credential
+      console.log('Completing recovery with code:', code);
+      
+      // This would verify the OTP and create/restore the user session
+      await checkAuthStatus(); // Refresh user data after recovery
+    } catch (error) {
+      console.error('Error completing recovery:', error);
+      throw error;
+    }
+  };
+
+  const refreshSession = async (): Promise<void> => {
+    await checkAuthStatus();
+  };
+
+  const signOut = async (): Promise<void> => {
+    try {
+      // Clear Turnkey session
+      await indexedDbClient?.clearSession();
+      setUser(null);
+    } catch (error) {
+      console.error('Sign out error:', error);
+      // Still clear user state even if Turnkey signout fails
+      setUser(null);
+    }
   };
 
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     isLoading,
-    signInWithGoogle,
-    signInWithPasskey,
     signOut,
-    continueAsGuest
+    refreshSession,
+    getAuthMethods,
+    linkAccount,
+    unlinkAccount,
+    setupRecovery,
+    initiateRecovery,
+    completeRecovery,
   };
 
   return (

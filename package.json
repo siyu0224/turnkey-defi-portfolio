@@ -14,7 +14,6 @@
     "preview": "npm run build && npm run start"
   },
   "dependencies": {
-    "@react-oauth/google": "^0.12.2",
     "@turnkey/api-key-stamper": "^0.4.7",
     "@turnkey/http": "^3.5.1",
     "@turnkey/sdk-react": "^5.2.8",

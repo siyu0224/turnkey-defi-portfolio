@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import SignInModal from "@/components/SignInModal";
+import TurnkeyAuthModal from "@/components/TurnkeyAuthModal";
 
 export default function Home() {
   const router = useRouter();
@@ -60,8 +60,14 @@ export default function Home() {
               {isAuthenticated && (
                 <p className="text-sm text-gray-600">
                   Signed in with {user?.authMethod === 'google' ? 'Google' : 
+                                  user?.authMethod === 'apple' ? 'Apple' :
+                                  user?.authMethod === 'facebook' ? 'Facebook' :
+                                  user?.authMethod === 'microsoft' ? 'Microsoft' :
+                                  user?.authMethod === 'github' ? 'GitHub' :
                                   user?.authMethod === 'passkey' ? 'Passkey' : 
-                                  'Guest access'}
+                                  user?.authMethod === 'email' ? 'Email' :
+                                  user?.authMethod === 'phone' ? 'SMS' :
+                                  user?.authMethod}
                 </p>
               )}
             </div>
@@ -168,8 +174,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Sign In Modal */}
-      <SignInModal 
+      {/* Turnkey Auth Modal */}
+      <TurnkeyAuthModal 
         isOpen={showSignIn} 
         onClose={() => {
           setShowSignIn(false);
@@ -179,7 +185,13 @@ export default function Home() {
               router.push("/dashboard");
             }, 500);
           }
-        }} 
+        }}
+        mode="signin"
+        onAuthSuccess={() => {
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 500);
+        }}
       />
     </div>
   );
