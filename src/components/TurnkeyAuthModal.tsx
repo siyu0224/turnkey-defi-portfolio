@@ -150,9 +150,9 @@ export default function TurnkeyAuthModal({
     "passkey"  // Passkey/WebAuthn authentication
   ];
   
-  const handleAuthSuccess = async (authData: unknown) => {
+  const handleAuthSuccess = async () => {
     setIsLoading(false);
-    console.log('Authentication successful:', authData);
+    console.log('Authentication successful');
     
     // Refresh the auth context to get updated user data
     await refreshSession();
