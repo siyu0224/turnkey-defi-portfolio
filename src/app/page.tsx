@@ -3,12 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import TurnkeyAuthModal from "@/components/TurnkeyAuthModal";
+import UserFriendlyAuthModal from "@/components/UserFriendlyAuthModal";
 
 export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const { isAuthenticated, user } = useAuth();
 
   const handleGetStarted = () => {
@@ -18,8 +19,14 @@ export default function Home() {
         router.push("/dashboard");
       }, 1000);
     } else {
+      setAuthMode('signup');
       setShowSignIn(true);
     }
+  };
+
+  const handleSignIn = () => {
+    setAuthMode('signin');
+    setShowSignIn(true);
   };
 
   return (
@@ -54,8 +61,20 @@ export default function Home() {
               >
                 {loading ? "Launching Portfolio..." : 
                  isAuthenticated ? `🚀 Welcome back, ${user?.name || 'User'}!` : 
-                 "🚀 Launch DeFi Portfolio"}
+                 "🚀 Get Started Free"}
               </button>
+              
+              {!isAuthenticated && (
+                <div className="flex items-center justify-center space-x-2 text-sm">
+                  <span className="text-gray-600">Already have an account?</span>
+                  <button
+                    onClick={handleSignIn}
+                    className="text-blue-600 hover:text-blue-700 font-semibold"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              )}
               
               {isAuthenticated && (
                 <p className="text-sm text-gray-600">
@@ -174,8 +193,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Turnkey Auth Modal */}
-      <TurnkeyAuthModal 
+      {/* User Friendly Auth Modal */}
+      <UserFriendlyAuthModal 
         isOpen={showSignIn} 
         onClose={() => {
           setShowSignIn(false);
@@ -186,7 +205,7 @@ export default function Home() {
             }, 500);
           }
         }}
-        mode="signin"
+        initialMode={authMode}
         onAuthSuccess={() => {
           setTimeout(() => {
             router.push("/dashboard");
