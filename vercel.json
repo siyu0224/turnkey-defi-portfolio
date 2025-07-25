@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_ORGANIZATION_ID": "@turnkey-org-id",
+    "TURNKEY_API_PUBLIC_KEY": "@turnkey-api-public-key",
+    "TURNKEY_API_PRIVATE_KEY": "@turnkey-api-private-key",
+    "NEXT_PUBLIC_BASE_URL": "@turnkey-base-url"
+  },
+  "functions": {
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
+}

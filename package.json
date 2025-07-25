@@ -1,0 +1,35 @@
+{
+  "name": "my-turnkey-project",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "deploy:vercel": "vercel --prod",
+    "deploy:netlify": "npm run build && netlify deploy --prod --dir=out",
+    "export": "next export",
+    "type-check": "tsc --noEmit",
+    "preview": "npm run build && npm run start"
+  },
+  "dependencies": {
+    "@turnkey/api-key-stamper": "^0.4.7",
+    "@turnkey/http": "^3.5.1",
+    "@turnkey/sdk-react": "^5.2.8",
+    "next": "15.4.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.4.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
