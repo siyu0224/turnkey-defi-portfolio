@@ -91,12 +91,21 @@ export default function UserFriendlyAuthModal({
             </div>
             
             <div className="space-y-4">
-              <Auth
-                authConfig={authConfig}
-                configOrder={['passkey', 'email', 'phone']}
-                onAuthSuccess={handleAuthSuccess}
-                onError={handleAuthError}
-              />
+              <div key={mode}> {/* Force re-render when switching modes */}
+                <Auth
+                  authConfig={authConfig}
+                  configOrder={['passkey', 'email', 'phone']}
+                  onAuthSuccess={handleAuthSuccess}
+                  onError={(error) => {
+                    handleAuthError(error);
+                    // If user doesn't exist and we're in signin mode, suggest signup
+                    if (error.includes('credential ID could not be found') && mode === 'signin') {
+                      alert('No account found with this credential. Please sign up first.');
+                      setMode('signup');
+                    }
+                  }}
+                />
+              </div>
             </div>
             
             {/* Debug Information */}
