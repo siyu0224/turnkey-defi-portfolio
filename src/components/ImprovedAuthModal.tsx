@@ -66,7 +66,7 @@ export default function ImprovedAuthModal({
         throw new Error('Passkeys not supported on this device');
       }
 
-      // Create a simple passkey authentication request
+      // Create a passkey authentication request
       const challenge = new Uint8Array(32);
       crypto.getRandomValues(challenge);
 
@@ -83,15 +83,33 @@ export default function ImprovedAuthModal({
         throw new Error('Passkey authentication cancelled');
       }
 
-      // TODO: Send credential to backend for verification
-      console.log('Passkey credential received:', credential.id);
+      const assertionResponse = credential.response as AuthenticatorAssertionResponse;
       
-      // For demo, simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Send credential to backend for verification
+      const authResponse = await fetch('/api/authenticate-passkey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credentialId: credential.id,
+          authenticatorData: btoa(String.fromCharCode(...new Uint8Array(assertionResponse.authenticatorData))),
+          clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(assertionResponse.clientDataJSON))),
+          signature: btoa(String.fromCharCode(...new Uint8Array(assertionResponse.signature))),
+        }),
+      });
+
+      if (!authResponse.ok) {
+        throw new Error('Passkey authentication failed');
+      }
+
+      const { success } = await authResponse.json();
       
-      await refreshSession();
-      onAuthSuccess?.();
-      onClose();
+      if (success) {
+        await refreshSession();
+        onAuthSuccess?.();
+        onClose();
+      } else {
+        throw new Error('Authentication was not successful');
+      }
       
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Passkey authentication failed';
@@ -396,7 +414,7 @@ export default function ImprovedAuthModal({
 
                           const { subOrganizationId } = await response.json();
                           
-                          // Create passkey
+                          // Create passkey with proper Turnkey integration
                           const challenge = new Uint8Array(32);
                           crypto.getRandomValues(challenge);
                           
@@ -424,10 +442,30 @@ export default function ImprovedAuthModal({
                               timeout: 60000,
                               attestation: "direct"
                             }
-                          });
+                          }) as PublicKeyCredential;
 
-                          if (credential) {
-                            console.log('Passkey created successfully');
+                          if (credential && credential.response) {
+                            const attestationResponse = credential.response as AuthenticatorAttestationResponse;
+                            
+                            // Register the passkey with Turnkey
+                            const registerResponse = await fetch('/api/register-passkey', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                email,
+                                subOrganizationId,
+                                userId: email, // Use email as userId
+                                credentialId: credential.id,
+                                attestationObject: btoa(String.fromCharCode(...new Uint8Array(attestationResponse.attestationObject))),
+                                clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(attestationResponse.clientDataJSON))),
+                              }),
+                            });
+
+                            if (!registerResponse.ok) {
+                              throw new Error('Failed to register passkey with Turnkey');
+                            }
+
+                            console.log('Passkey created and registered with Turnkey successfully');
                             await refreshSession();
                             onAuthSuccess?.();
                             onClose();
