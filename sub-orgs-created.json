@@ -1,0 +1,26 @@
+[
+  {
+    "email": "alice@demo.com",
+    "walletName": "Alice's DeFi Wallet",
+    "subOrganizationId": "0f2de1d4-0b0b-4af9-aae8-428cf61b8757",
+    "walletId": "529792c1-16d1-52ab-af2e-5ae0a140949b",
+    "address": "0x58910ecc69b05696Eb00464E6A19B0DfAeb37a95",
+    "status": "success"
+  },
+  {
+    "email": "bob@demo.com",
+    "walletName": "Bob's Trading Wallet",
+    "subOrganizationId": "cebff444-5838-4f7d-af36-ff41ef6dddd8",
+    "walletId": "e9119014-5b48-56bf-afc2-e01f9e845fc5",
+    "address": "0x4c4f089E6A2BE10B0D9bFFcD870FbDE1Ad912172",
+    "status": "success"
+  },
+  {
+    "email": "charlie@demo.com",
+    "walletName": "Charlie's Portfolio",
+    "subOrganizationId": "63cf50b0-e09c-414d-b494-b2b92c8e8660",
+    "walletId": "cd6ef6f2-2ce5-5652-b5e0-c8c821469935",
+    "address": "0xe2E31234D3C694e10ef0744308fed8704C93A780",
+    "status": "success"
+  }
+]

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import UserFriendlyAuthModal from "@/components/UserFriendlyAuthModal";
+import ImprovedAuthModal from "@/components/ImprovedAuthModal";
 
 export default function Home() {
   const router = useRouter();
@@ -193,8 +193,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* User Friendly Auth Modal */}
-      <UserFriendlyAuthModal 
+      {/* Improved Auth Modal */}
+      <ImprovedAuthModal 
         isOpen={showSignIn} 
         onClose={() => {
           setShowSignIn(false);
