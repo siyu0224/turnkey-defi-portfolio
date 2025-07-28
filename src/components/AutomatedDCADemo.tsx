@@ -158,29 +158,21 @@ export default function AutomatedDCADemo() {
       transactions: [],
     };
 
-    // Skip policy creation if it's causing issues
-    const skipPolicyCreation = true; // Temporary flag to skip policy creation
-    
-    if (!skipPolicyCreation) {
-      // Create real Turnkey policies for the DCA strategy
-      try {
-        // Create a policy for the DCA strategy
-        const policyResponse = await fetch('/api/create-policy', {
+    // Create policy for automated DCA transactions
+    try {
+      const policyResponse = await fetch('/api/create-dca-policy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          policyName: `DCA - ${newStrategy.name}`,
-          policyType: 'gas_limit', // Using gas limit as a proxy for DCA execution control
-          conditions: {
-            maxGasPrice: newStrategy.maxGasPrice,
-          },
+          strategyName: newStrategy.name,
           chain: selectedChain,
         }),
       });
 
       const policyData = await policyResponse.json();
+      console.log("DCA Policy creation:", policyData);
       
-      if (policyData.success) {
+      if (policyData.success && policyData.policy) {
         // Add policy ID to strategy
         strategy.id = policyData.policy.id;
         
@@ -215,16 +207,6 @@ export default function AutomatedDCADemo() {
       resetForm();
       
       alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nNote: Policy creation encountered an error, but the strategy has been saved locally.`);
-    }
-    } else {
-      // Skip policy creation and just save the strategy
-      const updatedStrategies = [...strategies, strategy];
-      setStrategies(updatedStrategies);
-      localStorage.setItem('dca-strategies', JSON.stringify(updatedStrategies));
-      setShowCreateStrategy(false);
-      resetForm();
-      
-      alert(`DCA strategy "${newStrategy.name}" created successfully!`);
     }
   };
 
