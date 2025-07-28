@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         policyCondition = `activity.type == "ACTIVITY_TYPE_SIGN_TRANSACTION_V2"`;
       } else {
         // Build expression to check if recipient is in allowlist
-        const addressChecks = allowedAddresses.map(addr => 
+        const addressChecks = allowedAddresses.map((addr: string) => 
           `activity.parameters.to == "${addr.toLowerCase()}"`
         ).join(" || ");
         
