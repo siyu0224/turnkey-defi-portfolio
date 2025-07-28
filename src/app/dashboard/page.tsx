@@ -556,24 +556,25 @@ export default function Dashboard() {
                               e.stopPropagation();
                               selectWallet(wallet);
                             }}
-                            className={`flex-1 text-xs py-2 px-3 rounded transition-colors ${
+                            className={`flex-1 text-sm py-2 px-3 rounded font-medium transition-all ${
                               isSelected
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                ? 'bg-blue-500 text-white cursor-default'
+                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:shadow-sm'
                             }`}
+                            disabled={isSelected}
                           >
-                            {isSelected ? 'Selected' : 'Select'}
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              viewWalletDetails(wallet);
-                            }}
-                            className="flex-1 text-xs py-2 px-3 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"
-                          >
-                            View Assets
+                            {isSelected ? '✓ Currently Active' : '→ Switch to This Wallet'}
                           </button>
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            viewWalletDetails(wallet);
+                          }}
+                          className="w-full mt-2 text-xs py-2 px-3 rounded bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                        >
+                          View Detailed Assets
+                        </button>
                       </div>
                     ) : (
                       <p className="text-sm text-red-500">
@@ -651,7 +652,19 @@ export default function Dashboard() {
             {/* Portfolio Overview */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Portfolio Overview</h2>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Portfolio Overview</h2>
+                  {activeWallet && (
+                    <div className="mt-2 flex items-center space-x-2">
+                      <span className="text-sm text-gray-600">Wallet:</span>
+                      <span className="text-sm font-medium text-gray-900">{activeWallet.name}</span>
+                      <span className="text-gray-400">•</span>
+                      <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                        {activeWallet.accounts?.[0]?.address || 'No address'}
+                      </code>
+                    </div>
+                  )}
+                </div>
                 <div className="text-right">
                   <p className="text-3xl font-bold text-gray-900">
                     ${totalPortfolioValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
