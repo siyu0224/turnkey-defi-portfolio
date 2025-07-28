@@ -1,0 +1,119 @@
+import { NextRequest, NextResponse } from "next/server";
+import { TurnkeyClient } from "@turnkey/http";
+import { ApiKeyStamper } from "@turnkey/api-key-stamper";
+import { createActivityPoller } from "@turnkey/http";
+import { addWalletOwnership } from "@/lib/wallet-storage";
+
+// Turnkey blockchain constants
+const BLOCKCHAIN_MAPPING = {
+  ethereum: "BLOCKCHAIN_ETHEREUM",
+  polygon: "BLOCKCHAIN_POLYGON", 
+  arbitrum: "BLOCKCHAIN_ARBITRUM",
+  optimism: "BLOCKCHAIN_OPTIMISM",
+  base: "BLOCKCHAIN_BASE",
+} as const;
+
+export async function POST(request: NextRequest) {
+  try {
+    const { walletName, chains } = await request.json();
+
+    if (!walletName || typeof walletName !== 'string') {
+      return NextResponse.json(
+        { error: "Wallet name is required and must be a string" },
+        { status: 400 }
+      );
+    }
+
+    if (!chains || !Array.isArray(chains) || chains.length === 0) {
+      return NextResponse.json(
+        { error: "At least one chain must be selected" },
+        { status: 400 }
+      );
+    }
+
+    console.log("Creating multi-chain wallet:", walletName, "for chains:", chains);
+
+    const stamper = new ApiKeyStamper({
+      apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
+      apiPrivateKey: process.env.TURNKEY_API_PRIVATE_KEY!,
+    });
+
+    const turnkeyClient = new TurnkeyClient({
+      baseUrl: process.env.NEXT_PUBLIC_BASE_URL || "https://api.turnkey.com",
+    }, stamper);
+
+    // Get current user ID
+    const whoamiResponse = await turnkeyClient.getWhoami({
+      organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
+    });
+    const currentUserId = whoamiResponse.userId;
+
+    // Create accounts for each selected chain
+    const accounts = chains.map((chain: keyof typeof BLOCKCHAIN_MAPPING) => ({
+      curve: "CURVE_SECP256K1",
+      pathFormat: "PATH_FORMAT_BIP32",
+      path: "m/44'/60'/0'/0/0", // Standard Ethereum derivation path
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
+      blockchain: BLOCKCHAIN_MAPPING[chain] || "BLOCKCHAIN_ETHEREUM",
+    }));
+
+    // Use activity poller to ensure wallet creation completes
+    const activityPoller = createActivityPoller({
+      client: turnkeyClient,
+      requestFn: turnkeyClient.createWallet,
+    });
+
+    const activity = await activityPoller({
+      type: "ACTIVITY_TYPE_CREATE_WALLET",
+      organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
+      parameters: {
+        walletName,
+        accounts,
+      },
+      timestampMs: Date.now().toString(),
+    });
+
+    if (activity.status === "ACTIVITY_STATUS_COMPLETED") {
+      const walletId = activity.result?.createWalletResult?.walletId;
+      const addresses = activity.result?.createWalletResult?.addresses;
+
+      // Track wallet-user association
+      if (walletId) {
+        addWalletOwnership(walletId, currentUserId);
+      }
+
+      // Get wallet details with accounts
+      const walletDetails = await turnkeyClient.getWalletAccounts({
+        organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
+        walletId: walletId!,
+      });
+
+      return NextResponse.json({
+        success: true,
+        wallet: {
+          id: walletId,
+          name: walletName,
+          addresses: addresses,
+          accounts: walletDetails.accounts,
+          chains: chains,
+          createdAt: new Date().toISOString(),
+          userId: currentUserId,
+        },
+        message: `Multi-chain wallet "${walletName}" created successfully!`,
+      });
+    } else {
+      throw new Error(`Wallet creation failed with status: ${activity.status}`);
+    }
+
+  } catch (error) {
+    console.error("Error creating multi-chain wallet:", error);
+    
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Failed to create multi-chain wallet",
+        details: error instanceof Error ? error.stack : undefined
+      },
+      { status: 500 }
+    );
+  }
+}

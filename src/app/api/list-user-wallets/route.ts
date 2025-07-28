@@ -52,6 +52,20 @@ export async function POST() {
             walletId: wallet.walletId,
           });
 
+          // Map blockchain information
+          const blockchainMapping: Record<string, string> = {
+            'BLOCKCHAIN_ETHEREUM': 'ethereum',
+            'BLOCKCHAIN_POLYGON': 'polygon',
+            'BLOCKCHAIN_ARBITRUM': 'arbitrum',
+            'BLOCKCHAIN_OPTIMISM': 'optimism',
+            'BLOCKCHAIN_BASE': 'base',
+          };
+
+          // Extract unique blockchains from accounts
+          const chains = [...new Set(accountsResponse.accounts?.map(acc => 
+            blockchainMapping[acc.blockchain] || 'ethereum'
+          ))];
+
           return {
             id: wallet.walletId,
             name: wallet.walletName,
@@ -61,11 +75,12 @@ export async function POST() {
             imported: wallet.imported || false,
             accounts: accountsResponse.accounts || [{
               address: `${wallet.walletId.substring(0, 6)}...${wallet.walletId.substring(wallet.walletId.length - 4)}`,
-              blockchain: 'Ethereum',
+              blockchain: 'BLOCKCHAIN_ETHEREUM',
               addressFormat: 'ADDRESS_FORMAT_ETHEREUM',
               curveType: 'secp256k1'
             }],
-            primaryBlockchain: 'Ethereum',
+            chains: chains,
+            primaryBlockchain: chains[0] || 'ethereum',
             unclaimed: (wallet as any).unclaimed || false,
           };
         } catch (error) {

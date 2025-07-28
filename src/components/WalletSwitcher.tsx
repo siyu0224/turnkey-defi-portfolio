@@ -21,15 +21,21 @@ export default function WalletSwitcher() {
       >
         <div className="flex items-center space-x-2">
           <span className="text-lg">
-            {activeWallet.primaryBlockchain === 'Ethereum' ? '🟢' :
-             activeWallet.primaryBlockchain === 'Bitcoin' ? '🟠' :
-             activeWallet.primaryBlockchain === 'Solana' ? '🟣' : '⚪'}
+            {activeWallet.chains && activeWallet.chains.length > 1 ? '🌐' :
+             activeWallet.primaryBlockchain === 'ethereum' ? '⟠' :
+             activeWallet.primaryBlockchain === 'polygon' ? '⬡' :
+             activeWallet.primaryBlockchain === 'arbitrum' ? '🔷' :
+             activeWallet.primaryBlockchain === 'base' ? '🔵' :
+             activeWallet.primaryBlockchain === 'optimism' ? '🔴' : '⚪'}
           </span>
           <div className="text-left">
             <p className="text-sm font-medium text-gray-900">{activeWallet.name}</p>
             {primaryAccount && (
               <p className="text-xs text-gray-500">
                 {primaryAccount.address.slice(0, 6)}...{primaryAccount.address.slice(-4)}
+                {activeWallet.chains && activeWallet.chains.length > 1 && (
+                  <span className="ml-1 text-purple-600">({activeWallet.chains.length} chains)</span>
+                )}
               </p>
             )}
           </div>
@@ -71,15 +77,21 @@ export default function WalletSwitcher() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <span className="text-lg">
-                          {wallet.primaryBlockchain === 'Ethereum' ? '🟢' :
-                           wallet.primaryBlockchain === 'Bitcoin' ? '🟠' :
-                           wallet.primaryBlockchain === 'Solana' ? '🟣' : '⚪'}
+                          {wallet.chains && wallet.chains.length > 1 ? '🌐' :
+                           wallet.primaryBlockchain === 'ethereum' ? '⟠' :
+                           wallet.primaryBlockchain === 'polygon' ? '⬡' :
+                           wallet.primaryBlockchain === 'arbitrum' ? '🔷' :
+                           wallet.primaryBlockchain === 'base' ? '🔵' :
+                           wallet.primaryBlockchain === 'optimism' ? '🔴' : '⚪'}
                         </span>
                         <div>
                           <p className="text-sm font-medium text-gray-900">{wallet.name}</p>
                           {account && (
                             <p className="text-xs text-gray-500">
                               {account.address.slice(0, 8)}...{account.address.slice(-6)}
+                              {wallet.chains && wallet.chains.length > 1 && (
+                                <span className="ml-1 text-purple-600">({wallet.chains.length} chains)</span>
+                              )}
                             </p>
                           )}
                         </div>

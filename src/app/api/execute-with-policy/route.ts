@@ -3,13 +3,23 @@ import { TurnkeyClient } from "@turnkey/http";
 import { ApiKeyStamper } from "@turnkey/api-key-stamper";
 import { createActivityPoller } from "@turnkey/http";
 
+// Turnkey blockchain constants
+const BLOCKCHAIN_MAPPING = {
+  ethereum: "BLOCKCHAIN_ETHEREUM",
+  polygon: "BLOCKCHAIN_POLYGON", 
+  arbitrum: "BLOCKCHAIN_ARBITRUM",
+  optimism: "BLOCKCHAIN_OPTIMISM",
+  base: "BLOCKCHAIN_BASE",
+} as const;
+
 export async function POST(request: NextRequest) {
   try {
     const { 
       walletId, 
       transactionType,
       transactionParams,
-      policyId 
+      policyId,
+      chain
     } = await request.json();
 
     if (!walletId || !transactionType || !transactionParams) {

@@ -74,6 +74,7 @@ export default function Dashboard() {
   const [selectedWallet, setSelectedWallet] = useState<SelectedWallet | null>(null);
   const [showCreateWallet, setShowCreateWallet] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
+  const [selectedChains, setSelectedChains] = useState<string[]>(['ethereum']);
   const [selectedWalletAssets, setSelectedWalletAssets] = useState<WalletAssets | null>(null);
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [assetsLoading, setAssetsLoading] = useState(false);
@@ -161,15 +162,22 @@ export default function Dashboard() {
       return;
     }
 
+    if (selectedChains.length === 0) {
+      alert('Please select at least one blockchain');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await fetch('/api/create-wallet', {
+      const endpoint = selectedChains.length > 1 ? '/api/create-multi-chain-wallet' : '/api/create-wallet';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           walletName: newWalletName.trim(),
+          chains: selectedChains,
         }),
       });
 
@@ -200,6 +208,7 @@ export default function Dashboard() {
         
         // Reset form
         setNewWalletName('');
+        setSelectedChains(['ethereum']); // Reset to default
         setShowCreateWallet(false);
         
         alert(`Wallet "${data.wallet.name}" created successfully!`);
@@ -639,6 +648,7 @@ export default function Dashboard() {
                     onClick={() => {
                       setShowCreateWallet(false);
                       setNewWalletName('');
+                      setSelectedChains(['ethereum']);
                     }}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -658,8 +668,46 @@ export default function Dashboard() {
                       placeholder="e.g., My DeFi Wallet"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       autoFocus
-                      onKeyPress={(e) => e.key === 'Enter' && createWallet()}
                     />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Blockchains
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'ethereum', name: 'Ethereum', icon: '⟠' },
+                        { id: 'polygon', name: 'Polygon', icon: '⬡' },
+                        { id: 'arbitrum', name: 'Arbitrum', icon: '🔷' },
+                        { id: 'base', name: 'Base', icon: '🔵' },
+                        { id: 'optimism', name: 'Optimism', icon: '🔴' },
+                      ].map((chain) => (
+                        <label
+                          key={chain.id}
+                          className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer transition-all ${
+                            selectedChains.includes(chain.id)
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedChains.includes(chain.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedChains([...selectedChains, chain.id]);
+                              } else {
+                                setSelectedChains(selectedChains.filter(c => c !== chain.id));
+                              }
+                            }}
+                            className="sr-only"
+                          />
+                          <span className="text-lg">{chain.icon}</span>
+                          <span className="text-sm font-medium">{chain.name}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                   
                   <div className="flex space-x-3">
@@ -667,6 +715,7 @@ export default function Dashboard() {
                       onClick={() => {
                         setShowCreateWallet(false);
                         setNewWalletName('');
+                        setSelectedChains(['ethereum']);
                       }}
                       className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
                     >

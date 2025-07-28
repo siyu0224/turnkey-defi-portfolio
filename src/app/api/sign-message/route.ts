@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { TurnkeyClient } from "@turnkey/http";
 import { ApiKeyStamper } from "@turnkey/api-key-stamper";
 
+// Turnkey blockchain constants
+const BLOCKCHAIN_MAPPING = {
+  ethereum: "BLOCKCHAIN_ETHEREUM",
+  polygon: "BLOCKCHAIN_POLYGON", 
+  arbitrum: "BLOCKCHAIN_ARBITRUM",
+  optimism: "BLOCKCHAIN_OPTIMISM",
+  base: "BLOCKCHAIN_BASE",
+} as const;
+
 export async function POST(request: NextRequest) {
   try {
     const { message, address, walletId, chain } = await request.json();
@@ -31,9 +40,13 @@ export async function POST(request: NextRequest) {
       throw new Error("No accounts found for this wallet");
     }
 
-    // Use the first account's address for signing
-    const signingAddress = accountsResponse.accounts[0].address;
-    console.log("Using actual address for signing:", signingAddress);
+    // Find the account for the specified blockchain
+    const selectedBlockchain = chain ? BLOCKCHAIN_MAPPING[chain as keyof typeof BLOCKCHAIN_MAPPING] : "BLOCKCHAIN_ETHEREUM";
+    const account = accountsResponse.accounts.find(acc => acc.blockchain === selectedBlockchain) 
+                    || accountsResponse.accounts[0]; // Fallback to first account
+    
+    const signingAddress = account.address;
+    console.log("Using address for signing on", selectedBlockchain, ":", signingAddress);
 
     // Convert message to hex payload
     const encoder = new TextEncoder();

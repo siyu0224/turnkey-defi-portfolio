@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { TurnkeyClient } from "@turnkey/http";
 import { ApiKeyStamper } from "@turnkey/api-key-stamper";
 
+// Turnkey blockchain constants
+const BLOCKCHAIN_MAPPING = {
+  ethereum: "BLOCKCHAIN_ETHEREUM",
+  polygon: "BLOCKCHAIN_POLYGON", 
+  arbitrum: "BLOCKCHAIN_ARBITRUM",
+  optimism: "BLOCKCHAIN_OPTIMISM",
+  base: "BLOCKCHAIN_BASE",
+  all: "ALL_CHAINS",
+} as const;
+
 export async function POST(request: NextRequest) {
   try {
     const { policyName, policyType, conditions, chain } = await request.json();
@@ -24,15 +34,24 @@ export async function POST(request: NextRequest) {
 
     // Build policy condition based on type
     let policyCondition = "";
+    const selectedBlockchain = chain ? BLOCKCHAIN_MAPPING[chain as keyof typeof BLOCKCHAIN_MAPPING] : null;
     
     if (policyType === "spending_limit") {
-      // Daily spending limit policy
+      // Daily spending limit policy with blockchain support
       policyCondition = `
         function evaluate(activity) {
           // Check if this is a sign transaction activity
           if (activity.type !== "ACTIVITY_TYPE_SIGN_TRANSACTION_V2") {
             return { allow: true };
           }
+          
+          ${selectedBlockchain && selectedBlockchain !== "ALL_CHAINS" ? `
+          // Check if transaction is on the correct blockchain
+          const activityBlockchain = activity.parameters?.blockchain;
+          if (activityBlockchain && activityBlockchain !== "${selectedBlockchain}") {
+            return { allow: true }; // Policy doesn't apply to this chain
+          }
+          ` : ''}
           
           // Implement daily spending limit
           const limit = ${conditions.dailyLimit || "1000000000000000000"}; // Wei
@@ -45,7 +64,7 @@ export async function POST(request: NextRequest) {
           if (BigInt(value) > BigInt(limit)) {
             return {
               allow: false,
-              reason: "Daily spending limit exceeded"
+              reason: "Daily spending limit exceeded${selectedBlockchain && selectedBlockchain !== "ALL_CHAINS" ? ` on ${chain}` : ''}"
             };
           }
           
@@ -53,12 +72,20 @@ export async function POST(request: NextRequest) {
         }
       `;
     } else if (policyType === "gas_limit") {
-      // Gas price limit policy
+      // Gas price limit policy with blockchain support
       policyCondition = `
         function evaluate(activity) {
           if (activity.type !== "ACTIVITY_TYPE_SIGN_TRANSACTION_V2") {
             return { allow: true };
           }
+          
+          ${selectedBlockchain && selectedBlockchain !== "ALL_CHAINS" ? `
+          // Check if transaction is on the correct blockchain
+          const activityBlockchain = activity.parameters?.blockchain;
+          if (activityBlockchain && activityBlockchain !== "${selectedBlockchain}") {
+            return { allow: true }; // Policy doesn't apply to this chain
+          }
+          ` : ''}
           
           const maxGasPrice = "${conditions.maxGasPrice || "100000000000"}"; // Wei
           const gasPrice = activity.parameters?.gasPrice || "0";
@@ -66,7 +93,7 @@ export async function POST(request: NextRequest) {
           if (BigInt(gasPrice) > BigInt(maxGasPrice)) {
             return {
               allow: false,
-              reason: "Gas price exceeds maximum allowed"
+              reason: "Gas price exceeds maximum allowed${selectedBlockchain && selectedBlockchain !== "ALL_CHAINS" ? ` on ${chain}` : ''}"
             };
           }
           
