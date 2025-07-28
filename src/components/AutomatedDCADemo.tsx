@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useWallet } from "@/contexts/WalletContext";
+import { checkDCAExecutionGuard, logDCAExecution } from "@/lib/dca-transaction-guard";
 
 interface DCAStrategy {
   id: string;
@@ -227,6 +228,22 @@ export default function AutomatedDCADemo() {
       const toAmount = (fromAmount * fromPrice) / toPrice;
       const slippage = parseFloat(strategy.config.slippageTolerance) / 100;
       const minToAmount = toAmount * (1 - slippage);
+
+      // Check execution guards before proceeding
+      const guardCheck = await checkDCAExecutionGuard({
+        fromToken: strategy.config.fromToken,
+        toToken: strategy.config.toToken,
+        amount: fromAmount,
+        maxGasPrice: parseFloat(strategy.config.maxGasPrice) * 1e9,
+        walletAddress: activeWallet.accounts?.[0]?.address || '',
+        strategyId: strategy.id,
+      }, strategy);
+
+      if (!guardCheck.canExecute) {
+        alert(`Cannot execute DCA strategy: ${guardCheck.reason}`);
+        setExecuting(false);
+        return;
+      }
 
       // Create swap transaction
       const chainConfig = chainConfigs[strategy.chain] || chainConfigs.ethereum;
