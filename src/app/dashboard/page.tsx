@@ -115,13 +115,14 @@ export default function Dashboard() {
             });
           }
         }
+        return data.wallets;
       }
     } catch (error) {
       console.error('Error loading wallets:', error);
     } finally {
       setWalletsLoading(false);
     }
-  }, [selectedWallet, activeWallet, setActiveWallet]);
+  }, [activeWallet, setActiveWallet]);
 
   // Load wallets on component mount
   useEffect(() => {
@@ -138,6 +139,8 @@ export default function Dashboard() {
           address: address,
         });
       }
+    } else {
+      setSelectedWallet(null);
     }
   }, [activeWallet]);
 
@@ -165,12 +168,13 @@ export default function Dashboard() {
         // Reload wallets to show the new one
         await loadWallets();
         
-        // Reload and set as active wallet
-        const updatedWallets = await loadWallets();
-        const newWalletInfo = wallets.find(w => w.id === data.wallet.id);
-        if (newWalletInfo) {
-          setActiveWallet(newWalletInfo);
-        }
+        // Set as active wallet after reload
+        setTimeout(() => {
+          const newWalletInfo = wallets.find(w => w.id === data.wallet.id);
+          if (newWalletInfo) {
+            setActiveWallet(newWalletInfo);
+          }
+        }, 100);
         
         // Add wallet creation transaction
         const newTransaction: Transaction = {
