@@ -19,6 +19,7 @@ interface WalletInfo {
   createdAt: string;
   primaryBlockchain: string;
   error?: string;
+  unclaimed?: boolean;
 }
 
 interface WalletAssets {
@@ -519,14 +520,20 @@ export default function Dashboard() {
                   <div
                     key={wallet.id}
                     className={`p-4 rounded-lg border-2 transition-all ${
-                      isSelected 
+                      (wallet as any).unclaimed
+                        ? 'border-orange-300 bg-orange-50'
+                        : isSelected 
                         ? 'border-blue-500 bg-blue-50 shadow-md' 
                         : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-semibold text-gray-900 truncate">{wallet.name}</h3>
-                      {isSelected && (
+                      {(wallet as any).unclaimed ? (
+                        <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
+                          Unclaimed
+                        </span>
+                      ) : isSelected && (
                         <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
                           Selected
                         </span>
@@ -564,20 +571,40 @@ export default function Dashboard() {
                         
                         {/* Action buttons */}
                         <div className="flex space-x-2 mt-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              selectWallet(wallet);
-                            }}
-                            className={`flex-1 text-sm py-2 px-3 rounded font-medium transition-all ${
-                              isSelected
-                                ? 'bg-blue-500 text-white cursor-default'
-                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:shadow-sm'
-                            }`}
-                            disabled={isSelected}
-                          >
-                            {isSelected ? '✓ Currently Active' : '→ Switch to This Wallet'}
-                          </button>
+                          {(wallet as any).unclaimed ? (
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const res = await fetch('/api/claim-my-wallet', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ walletName: wallet.name })
+                                });
+                                if (res.ok) {
+                                  alert(`Successfully claimed ${wallet.name}`);
+                                  loadWallets();
+                                }
+                              }}
+                              className="flex-1 text-sm py-2 px-3 rounded font-medium bg-orange-500 text-white hover:bg-orange-600 transition-all"
+                            >
+                              🔐 Claim This Wallet
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectWallet(wallet);
+                              }}
+                              className={`flex-1 text-sm py-2 px-3 rounded font-medium transition-all ${
+                                isSelected
+                                  ? 'bg-blue-500 text-white cursor-default'
+                                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200 hover:shadow-sm'
+                              }`}
+                              disabled={isSelected}
+                            >
+                              {isSelected ? '✓ Currently Active' : '→ Switch to This Wallet'}
+                            </button>
+                          )}
                         </div>
                         <button
                           onClick={(e) => {

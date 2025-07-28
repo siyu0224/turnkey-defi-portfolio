@@ -19,18 +19,20 @@ export async function POST(request: NextRequest) {
       baseUrl: process.env.NEXT_PUBLIC_BASE_URL || "https://api.turnkey.com",
     }, stamper);
 
-    // First get the wallet accounts to find the correct signWith ID
-    const walletAccountsResponse = await turnkeyClient.getWalletAccounts({
-      organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+    // First, get the actual wallet accounts to find the real address
+    console.log("Getting wallet accounts for signing...");
+    const accountsResponse = await turnkeyClient.getWalletAccounts({
+      organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
       walletId: walletId,
     });
 
-    const account = walletAccountsResponse.accounts.find(acc => acc.address === address);
-    if (!account) {
-      throw new Error(`No account found for address ${address}`);
+    if (!accountsResponse.accounts || accountsResponse.accounts.length === 0) {
+      throw new Error("No accounts found for this wallet");
     }
 
-    console.log("Using wallet account ID:", account.walletAccountId);
+    // Use the first account's address for signing
+    const signingAddress = accountsResponse.accounts[0].address;
+    console.log("Using actual address for signing:", signingAddress);
 
     // Convert message to hex payload
     const encoder = new TextEncoder();
@@ -39,12 +41,12 @@ export async function POST(request: NextRequest) {
       .map(b => b.toString(16).padStart(2, "0"))
       .join("");
 
-    // For wallet accounts, we need to sign using the address, not privateKeyId
+    // Sign with the actual address
     const response = await turnkeyClient.signRawPayload({
       type: "ACTIVITY_TYPE_SIGN_RAW_PAYLOAD_V2",
-      organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+      organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
       parameters: {
-        signWith: address,  // Use the address for wallet-based signing
+        signWith: signingAddress,  // Use the actual address
         payload,
         encoding: "PAYLOAD_ENCODING_HEXADECIMAL",
         hashFunction: "HASH_FUNCTION_KECCAK256",
