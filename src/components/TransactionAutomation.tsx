@@ -87,7 +87,10 @@ export default function TransactionAutomation() {
             executedAmount: '0'
           },
           createdAt: new Date().toISOString(),
-          nextExecution: new Date(Date.now() + (newPolicy.frequency === 'daily' ? 24 : newPolicy.frequency === 'weekly' ? 168 : 720) * 60 * 60 * 1000).toISOString()
+          nextExecution: new Date(Date.now() + 
+            ((newPolicy.frequency as string) === 'daily' ? 24 : 
+             (newPolicy.frequency as string) === 'weekly' ? 168 : 720) * 60 * 60 * 1000
+          ).toISOString()
         };
         
         setPolicies([...policies, policy]);
