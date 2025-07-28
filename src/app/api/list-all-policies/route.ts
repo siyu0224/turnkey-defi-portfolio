@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }, stamper);
 
     // Get all policies for the organization
-    const policiesResponse = await turnkeyClient.listPolicies({
+    const policiesResponse = await turnkeyClient.getPolicies({
       organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
     });
 
