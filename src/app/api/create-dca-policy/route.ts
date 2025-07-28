@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }, stamper);
 
     // Build policy condition using eth.tx.* parameters
-    let conditions = [
+    const conditions = [
       "activity.resource == 'TRANSACTION'",
       "activity.action == 'SIGN'"
     ];
