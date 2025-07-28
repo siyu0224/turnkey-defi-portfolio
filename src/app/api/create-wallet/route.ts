@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { TurnkeyClient } from "@turnkey/http";
 import { ApiKeyStamper } from "@turnkey/api-key-stamper";
 import { createActivityPoller } from "@turnkey/http";
-import { addWalletUserMapping } from "@/lib/wallet-user-mapping";
+import { addWalletOwnership } from "@/lib/wallet-storage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
       // Track wallet-user association
       if (walletId) {
-        addWalletUserMapping(walletId, currentUserId);
+        addWalletOwnership(walletId, currentUserId);
       }
 
       return NextResponse.json({

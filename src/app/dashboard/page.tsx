@@ -105,8 +105,8 @@ export default function Dashboard() {
   const loadWallets = useCallback(async () => {
     setWalletsLoading(true);
     try {
-      // Use basic API that doesn't fetch addresses
-      const response = await fetch('/api/list-wallets-basic', {
+      // Use user-specific API that only returns wallets owned by current user
+      const response = await fetch('/api/list-user-wallets', {
         method: 'POST',
       });
       const data = await response.json();
@@ -468,37 +468,13 @@ export default function Dashboard() {
                  `You have ${wallets.length} wallet${wallets.length !== 1 ? 's' : ''}.`}
               </p>
             </div>
-            <div className="flex space-x-4">
-              <button
-                onClick={async () => {
-                  const res = await fetch('/api/debug-wallets');
-                  const data = await res.json();
-                  console.log('Debug response:', data);
-                  alert(JSON.stringify(data, null, 2));
-                }}
-                className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
-              >
-                Debug API
-              </button>
-              <button
-                onClick={async () => {
-                  const res = await fetch('/api/test-wallet-structure');
-                  const data = await res.json();
-                  console.log('Wallet structure:', data);
-                  alert(JSON.stringify(data.walletStructure, null, 2));
-                }}
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm"
-              >
-                Test Wallet
-              </button>
-              <button
-                onClick={() => setShowCreateWallet(true)}
-                disabled={loading || walletsLoading}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 transition-all"
-              >
-                + Create New Wallet
-              </button>
-            </div>
+            <button
+              onClick={() => setShowCreateWallet(true)}
+              disabled={loading || walletsLoading}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 transition-all"
+            >
+              + Create New Wallet
+            </button>
           </div>
 
           {/* Wallet List */}
@@ -511,25 +487,50 @@ export default function Dashboard() {
             <div className="text-center py-12 bg-gray-50 rounded-lg">
               <div className="text-6xl mb-4 opacity-50">🛡️</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">No Wallets Yet</h3>
-              <p className="text-gray-600 mb-4">Create your first secure wallet or claim an existing one.</p>
-              <div className="flex justify-center space-x-4">
-                <button
-                  onClick={() => setShowCreateWallet(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
-                >
-                  Create New Wallet
-                </button>
-                <button
-                  onClick={loadAllWallets}
-                  disabled={claimLoading}
-                  className="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-all disabled:opacity-50"
-                >
-                  {claimLoading ? 'Loading...' : 'Claim Existing Wallet'}
-                </button>
+              <p className="text-gray-600 mb-6">Create your first secure wallet to get started.</p>
+              <button
+                onClick={() => setShowCreateWallet(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
+              >
+                Create New Wallet
+              </button>
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className="text-sm text-gray-600 mb-3">Already created wallets? Claim them by name:</p>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={async () => {
+                      const res = await fetch('/api/claim-my-wallet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ walletName: 'wallet aaa' })
+                      });
+                      if (res.ok) {
+                        alert('Successfully claimed wallet aaa');
+                        loadWallets();
+                      }
+                    }}
+                    className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded"
+                  >
+                    Claim "wallet aaa"
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const res = await fetch('/api/claim-my-wallet', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ walletName: 'wallet bbb' })
+                      });
+                      if (res.ok) {
+                        alert('Successfully claimed wallet bbb');
+                        loadWallets();
+                      }
+                    }}
+                    className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded"
+                  >
+                    Claim "wallet bbb"
+                  </button>
+                </div>
               </div>
-              <p className="text-xs text-gray-500 mt-4">
-                If you created a wallet before, you can claim it to see it here.
-              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
