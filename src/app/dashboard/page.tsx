@@ -262,7 +262,16 @@ export default function Dashboard() {
   };
 
   const selectWallet = (wallet: WalletInfo) => {
+    console.log('Selecting wallet:', wallet.name, wallet.id);
     setActiveWallet(wallet);
+    // Force update of selectedWallet
+    const address = wallet.accounts?.[0]?.address;
+    if (address && address !== 'Loading...' && address !== 'Error loading address') {
+      setSelectedWallet({
+        walletId: wallet.id,
+        address: address,
+      });
+    }
   };
 
   const loadAllWallets = async () => {
