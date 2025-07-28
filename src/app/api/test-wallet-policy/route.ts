@@ -120,12 +120,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all policies to see what exists
-    let allPolicies;
+    let allPolicies: any[] = [];
     try {
       const policiesResponse = await turnkeyClient.getPolicies({
         organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
       });
-      allPolicies = policiesResponse.policies;
+      allPolicies = policiesResponse.policies || [];
     } catch (error) {
       console.error("Error getting policies:", error);
       allPolicies = [];
