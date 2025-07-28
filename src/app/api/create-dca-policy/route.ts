@@ -45,8 +45,12 @@ export async function POST(request: NextRequest) {
     if (fromToken === 'ETH' && maxAmount) {
       const maxAmountWei = parseFloat(maxAmount) * 1e18; // Convert ETH to Wei
       conditions.push(`eth.tx.value <= ${maxAmountWei}`);
+    } else if (toToken === 'ETH') {
+      // When buying ETH, we don't restrict eth.tx.value
+      // The transaction might have ETH value for wrapping/unwrapping
+      console.log("Buying ETH - not restricting eth.tx.value");
     } else {
-      // For token transfers, ensure no ETH is sent
+      // For token-to-token swaps, ensure no ETH is sent
       conditions.push(`eth.tx.value == 0`);
     }
 
@@ -66,7 +70,7 @@ export async function POST(request: NextRequest) {
       timestampMs: Date.now().toString(),
       organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
       parameters: {
-        policyName: `DCA - ${strategyName} - ${fromToken}→${toToken}`,
+        policyName: `DCA - ${strategyName} - ${fromToken} to ${toToken}`,
         effect: "EFFECT_ALLOW",
         condition: policyCondition,
         consensus: "true", // No manual approval needed for automated transactions
