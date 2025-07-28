@@ -51,6 +51,14 @@ export async function POST(request: NextRequest) {
     }
 
     const policyCondition = conditions.join(' && ');
+    
+    console.log("Creating DCA policy with:", {
+      strategyName,
+      fromToken,
+      toToken,
+      policyCondition,
+      targetContract
+    });
 
     // Create a policy for automated DCA transactions
     const policyResponse = await turnkeyClient.createPolicy({

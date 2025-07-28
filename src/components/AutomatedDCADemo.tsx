@@ -176,11 +176,12 @@ export default function AutomatedDCADemo() {
       });
 
       const policyData = await policyResponse.json();
-      console.log("DCA Policy creation:", policyData);
+      console.log("DCA Policy creation response:", policyData);
       
       if (policyData.success && policyData.policy) {
         // Add policy ID to strategy
-        strategy.id = policyData.policy.id;
+        strategy.policyId = policyData.policy.id;
+        console.log("Policy created successfully:", policyData.policy);
         
         const updatedStrategies = [...strategies, strategy];
         setStrategies(updatedStrategies);
@@ -188,10 +189,12 @@ export default function AutomatedDCADemo() {
         setShowCreateStrategy(false);
         resetForm();
         
-        // Show success message
-        alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nA Turnkey policy has been created to control gas prices for this strategy.`);
+        // Show success message with policy details
+        alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nPolicy ID: ${policyData.policy.id}\nPolicy Name: ${policyData.policy.name}\nConditions: ${policyData.policy.condition || 'Transaction controls applied'}`);
       } else {
-        // Fall back to local storage if policy creation fails
+        // Log the error but still create the strategy
+        console.error("Policy creation failed:", policyData.error || "Unknown error");
+        alert(`Warning: Policy creation failed (${policyData.error || 'Unknown error'}), but strategy was created locally.`);
         console.error('Policy creation failed:', policyData);
         const updatedStrategies = [...strategies, strategy];
         setStrategies(updatedStrategies);
