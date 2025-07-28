@@ -154,7 +154,7 @@ export default function TestTransactionParams() {
         )}
 
         <div className="mt-8 p-4 bg-blue-50 rounded">
-          <h3 className="font-semibold mb-2">What we're testing:</h3>
+          <h3 className="font-semibold mb-2">What we&apos;re testing:</h3>
           <ul className="list-disc list-inside text-sm space-y-1">
             <li><code>activity.value</code> - Direct value access</li>
             <li><code>activity.parameters.value</code> - Parameters object</li>
