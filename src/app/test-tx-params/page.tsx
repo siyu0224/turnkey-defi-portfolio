@@ -28,6 +28,28 @@ export default function TestTransactionParams() {
     }
   };
 
+  const testEthTxParams = async () => {
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const response = await fetch('/api/test-eth-tx-params', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+      setResult(data);
+    } catch (error: any) {
+      setResult({ 
+        error: 'Network error', 
+        details: error?.message || error,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const testCustomCondition = async () => {
     const condition = prompt("Enter a custom condition to test:", 
       "activity.resource == 'TRANSACTION' && activity.parameters.value > 1000000000000000000");
@@ -79,7 +101,15 @@ export default function TestTransactionParams() {
               disabled={loading}
               className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? 'Testing...' : 'Test All Parameter Syntaxes'}
+              {loading ? 'Testing...' : 'Test Activity Parameter Syntaxes'}
+            </button>
+
+            <button
+              onClick={testEthTxParams}
+              disabled={loading}
+              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:opacity-50 ml-4"
+            >
+              {loading ? 'Testing...' : 'Test ETH.TX Parameter Syntaxes'}
             </button>
 
             <button
@@ -155,17 +185,33 @@ export default function TestTransactionParams() {
 
         <div className="mt-8 p-4 bg-blue-50 rounded">
           <h3 className="font-semibold mb-2">What we&apos;re testing:</h3>
-          <ul className="list-disc list-inside text-sm space-y-1">
-            <li><code>activity.value</code> - Direct value access</li>
-            <li><code>activity.parameters.value</code> - Parameters object</li>
-            <li><code>activity.data.value</code> - Data field</li>
-            <li><code>activity.transaction.value</code> - Transaction object</li>
-            <li><code>activity.amount</code> - Amount field</li>
-            <li><code>activity.metadata.value</code> - Metadata field</li>
-          </ul>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-medium text-sm mb-1">Activity fields (failed):</h4>
+              <ul className="list-disc list-inside text-sm space-y-1 text-gray-600">
+                <li><code>activity.value</code></li>
+                <li><code>activity.parameters.value</code></li>
+                <li><code>activity.data.value</code></li>
+                <li><code>activity.transaction.value</code></li>
+                <li><code>activity.amount</code></li>
+                <li><code>activity.metadata.value</code></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-medium text-sm mb-1 text-green-700">ETH.TX fields (from docs):</h4>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li><code>eth.tx.value</code> - Amount in wei</li>
+                <li><code>eth.tx.gas_price</code> - Gas price</li>
+                <li><code>eth.tx.to</code> - Recipient address</li>
+                <li><code>eth.tx.from</code> - Sender address</li>
+                <li><code>eth.tx.data</code> - Calldata</li>
+                <li><code>eth.tx.gas</code> - Gas limit</li>
+              </ul>
+            </div>
+          </div>
           
           <p className="mt-4 text-sm text-gray-600">
-            If any of these syntaxes work, we can create more specific DCA policies!
+            According to Turnkey docs, the <code>eth.tx.*</code> syntax should work for transaction parameters!
           </p>
         </div>
       </div>
