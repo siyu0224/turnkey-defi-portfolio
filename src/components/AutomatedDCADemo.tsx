@@ -171,7 +171,7 @@ export default function AutomatedDCADemo() {
           maxAmount: newStrategy.amount,
           fromToken: newStrategy.fromToken,
           toToken: newStrategy.toToken,
-          targetContract: chains[selectedChain].dexRouter, // Use chain-specific DEX router
+          targetContract: chainConfigs[selectedChain as keyof typeof chainConfigs].dexRouter, // Use chain-specific DEX router
         }),
       });
 
