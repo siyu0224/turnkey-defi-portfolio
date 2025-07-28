@@ -275,29 +275,6 @@ export default function Dashboard() {
     }
   };
 
-  const loadAllWallets = async () => {
-    setClaimLoading(true);
-    try {
-      const response = await fetch('/api/all-wallets', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        setAllWallets(data.wallets);
-        if (data.wallets.length > 0) {
-          setShowClaimWallet(true);
-        } else {
-          alert('No wallets found in the organization');
-        }
-      }
-    } catch (error) {
-      console.error('Error loading all wallets:', error);
-      alert('Failed to load wallets');
-    } finally {
-      setClaimLoading(false);
-    }
-  };
 
   const claimWallet = async (walletId: string) => {
     setClaimLoading(true);
@@ -511,7 +488,7 @@ export default function Dashboard() {
                     }}
                     className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded"
                   >
-                    Claim "wallet aaa"
+                    Claim &quot;wallet aaa&quot;
                   </button>
                   <button
                     onClick={async () => {
@@ -527,7 +504,7 @@ export default function Dashboard() {
                     }}
                     className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded"
                   >
-                    Claim "wallet bbb"
+                    Claim &quot;wallet bbb&quot;
                   </button>
                 </div>
               </div>

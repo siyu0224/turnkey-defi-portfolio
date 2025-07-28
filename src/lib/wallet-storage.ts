@@ -8,7 +8,7 @@ interface WalletOwnership {
 }
 
 // In-memory storage (resets on server restart)
-let walletOwnerships: WalletOwnership[] = [];
+const walletOwnerships: WalletOwnership[] = [];
 
 export function addWalletOwnership(walletId: string, userId: string) {
   const existing = walletOwnerships.find(w => w.walletId === walletId);
