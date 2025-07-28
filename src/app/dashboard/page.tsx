@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import MessageSigningCard from "@/components/MessageSigningCard";
-import WalletSwitcher from "@/components/WalletSwitcher";
 
 interface WalletInfo {
   id: string;
@@ -402,7 +401,14 @@ export default function Dashboard() {
                   </p>
                 </div>
               )}
-              <WalletSwitcher />
+              {activeWallet && (
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">
+                    {activeWallet.name}
+                  </p>
+                  <p className="text-xs text-green-600">● Active Wallet</p>
+                </div>
+              )}
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">
                   {wallets.length} Wallet{wallets.length !== 1 ? 's' : ''}
