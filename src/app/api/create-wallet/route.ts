@@ -3,6 +3,7 @@ import { TurnkeyClient } from "@turnkey/http";
 import { ApiKeyStamper } from "@turnkey/api-key-stamper";
 import { createActivityPoller } from "@turnkey/http";
 import { addWalletOwnership } from "@/lib/wallet-storage";
+import { createWalletPolicies } from "@/lib/create-wallet-policies";
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,20 +68,22 @@ export async function POST(request: NextRequest) {
 
       // Create default policies for Ethereum
       try {
-        const policyResponse = await fetch(`${request.nextUrl.origin}/api/create-wallet-policies`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            walletId: walletId,
-            walletName: walletName,
-            chains: ['ethereum'], // Default to Ethereum for single-chain wallets
-          }),
-        });
-
-        const policyResult = await policyResponse.json();
+        const policyResult = await createWalletPolicies(
+          turnkeyClient,
+          process.env.TURNKEY_ORGANIZATION_ID!,
+          walletId!,
+          walletName,
+          ['ethereum'] // Default to Ethereum for single-chain wallets
+        );
         console.log("Policy creation result:", policyResult);
+        
+        if (policyResult.success) {
+          console.log(`Created ${policyResult.totalCreated} policies for wallet ${walletName}`);
+        }
+        
+        if (policyResult.errors) {
+          console.error("Some policies failed to create:", policyResult.errors);
+        }
       } catch (policyError) {
         console.error("Error creating policies for wallet:", policyError);
         // Continue even if policy creation fails
