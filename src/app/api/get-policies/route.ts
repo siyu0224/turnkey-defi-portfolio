@@ -4,7 +4,7 @@ import { ApiKeyStamper } from "@turnkey/api-key-stamper";
 
 export async function GET() {
   try {
-    console.log("Getting policies for organization:", process.env.NEXT_PUBLIC_ORGANIZATION_ID);
+    console.log("Getting policies for organization:", process.env.TURNKEY_ORGANIZATION_ID);
 
     const stamper = new ApiKeyStamper({
       apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
@@ -16,7 +16,7 @@ export async function GET() {
     }, stamper);
 
     const response = await turnkeyClient.getPolicies({
-      organizationId: process.env.NEXT_PUBLIC_ORGANIZATION_ID!,
+      organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
     });
 
     return NextResponse.json({ 

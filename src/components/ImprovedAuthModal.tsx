@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useTurnkey } from '@turnkey/sdk-react';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuth } from '@/contexts/AuthContext';
+import TurnkeyPasskeyAuth from './TurnkeyPasskeyAuth';
 
 interface ImprovedAuthModalProps {
   isOpen: boolean;
@@ -33,9 +33,9 @@ export default function ImprovedAuthModal({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
+  const [otpId, setOtpId] = useState('');
   
   const { refreshSession } = useAuth();
-  const { turnkey, passkeyClient, authIframeClient } = useTurnkey();
 
   useEffect(() => {
     if (!isOpen) {
@@ -46,86 +46,10 @@ export default function ImprovedAuthModal({
       setEmail('');
       setPhone('');
       setOtpCode('');
+      setOtpId('');
     }
   }, [isOpen]);
 
-  const handlePasskeyAuth = async () => {
-    setIsLoading(true);
-    setError('');
-    
-    try {
-      if (mode === 'signup') {
-        // For signup, show email input first
-        setAuthStep('enter-details');
-        setAuthMethod('passkey');
-        return;
-      }
-
-      // For sign in, use WebAuthn directly
-      if (!window.PublicKeyCredential) {
-        throw new Error('Passkeys not supported on this device');
-      }
-
-      // Create a passkey authentication request
-      const challenge = new Uint8Array(32);
-      crypto.getRandomValues(challenge);
-
-      const credential = await navigator.credentials.get({
-        publicKey: {
-          challenge,
-          timeout: 60000,
-          userVerification: "preferred",
-          rpId: window.location.hostname,
-        }
-      }) as PublicKeyCredential;
-
-      if (!credential) {
-        throw new Error('Passkey authentication cancelled');
-      }
-
-      const assertionResponse = credential.response as AuthenticatorAssertionResponse;
-      
-      // Send credential to backend for verification
-      const authResponse = await fetch('/api/authenticate-passkey', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          credentialId: credential.id,
-          authenticatorData: btoa(String.fromCharCode(...new Uint8Array(assertionResponse.authenticatorData))),
-          clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(assertionResponse.clientDataJSON))),
-          signature: btoa(String.fromCharCode(...new Uint8Array(assertionResponse.signature))),
-        }),
-      });
-
-      if (!authResponse.ok) {
-        throw new Error('Passkey authentication failed');
-      }
-
-      const { success } = await authResponse.json();
-      
-      if (success) {
-        await refreshSession();
-        onAuthSuccess?.();
-        onClose();
-      } else {
-        throw new Error('Authentication was not successful');
-      }
-      
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Passkey authentication failed';
-      
-      if (errorMsg.includes('NotAllowedError')) {
-        setError('Passkey authentication was cancelled or not allowed');
-      } else if (mode === 'signin') {
-        setError('No passkey found. Please sign up first.');
-        setMode('signup');
-      } else {
-        setError(errorMsg);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleEmailSubmit = async () => {
     if (!email) return;
@@ -134,13 +58,12 @@ export default function ImprovedAuthModal({
     setError('');
     
     try {
-      // TODO: Implement actual Turnkey email auth
-      // For now, simulate OTP sending
-      setAuthStep('verify-otp');
-      console.log('OTP would be sent to:', email);
+      // For now, just simulate the OTP sending process
+      setError('Email OTP feature is currently being configured. Please try again later.');
       
     } catch (err) {
-      setError('Failed to send verification code');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send verification code';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -172,18 +95,12 @@ export default function ImprovedAuthModal({
     setError('');
     
     try {
-      // TODO: Implement actual OTP verification
-      console.log('Verifying OTP:', otpCode);
-      
-      // Simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      await refreshSession();
-      onAuthSuccess?.();
-      onClose();
+      // For now, just show placeholder message
+      setError('Email OTP verification is currently being configured. Please try again later.');
       
     } catch (err) {
-      setError('Invalid verification code');
+      const errorMessage = err instanceof Error ? err.message : 'Invalid verification code';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -276,28 +193,41 @@ export default function ImprovedAuthModal({
           {/* Method Selection */}
           {authStep === 'select-method' && (
             <div className="space-y-3">
-              {/* Passkey */}
-              <button
-                onClick={() => {
-                  setAuthMethod('passkey');
-                  handlePasskeyAuth();
-                }}
-                disabled={isLoading}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center space-x-4 group"
-              >
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                  <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
-                  </svg>
+              {/* Passkey - Use proper Turnkey integration */}
+              <div className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all">
+                <div className="flex items-center space-x-4 mb-3">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold text-gray-900">Passkey</div>
+                    <div className="text-sm text-gray-600">
+                      {mode === 'signup' 
+                        ? 'Create secure passwordless account' 
+                        : 'Sign in with your passkey'
+                      }
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1 text-left">
-                  <div className="font-semibold text-gray-900">Passkey</div>
-                  <div className="text-sm text-gray-600">Face ID, Touch ID, or security key</div>
-                </div>
-                {isLoading && authMethod === 'passkey' && (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                )}
-              </button>
+                
+                <TurnkeyPasskeyAuth
+                  mode={mode}
+                  onSuccess={async (result) => {
+                    console.log('Turnkey passkey success:', result);
+                    await refreshSession();
+                    onAuthSuccess?.();
+                    onClose();
+                  }}
+                  onError={(error) => {
+                    setError(error);
+                    if (error.includes('sign up first') && mode === 'signin') {
+                      setMode('signup');
+                    }
+                  }}
+                />
+              </div>
 
               {/* Email */}
               <button
@@ -393,103 +323,13 @@ export default function ImprovedAuthModal({
                     />
                   </div>
                   
-                  {authMethod === 'passkey' && mode === 'signup' ? (
-                    <button
-                      onClick={async () => {
-                        if (!email) return;
-                        setIsLoading(true);
-                        setError('');
-                        
-                        try {
-                          // Create sub-org first
-                          const response = await fetch('/api/create-sub-org', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email }),
-                          });
-
-                          if (!response.ok) {
-                            throw new Error('Failed to create account');
-                          }
-
-                          const { subOrganizationId } = await response.json();
-                          
-                          // Create passkey with proper Turnkey integration
-                          const challenge = new Uint8Array(32);
-                          crypto.getRandomValues(challenge);
-                          
-                          const credential = await navigator.credentials.create({
-                            publicKey: {
-                              challenge,
-                              rp: {
-                                name: "DeFi Portfolio",
-                                id: window.location.hostname,
-                              },
-                              user: {
-                                id: new TextEncoder().encode(subOrganizationId),
-                                name: email,
-                                displayName: email.split('@')[0],
-                              },
-                              pubKeyCredParams: [
-                                { alg: -7, type: "public-key" },
-                                { alg: -257, type: "public-key" }
-                              ],
-                              authenticatorSelection: {
-                                authenticatorAttachment: "platform",
-                                userVerification: "preferred",
-                                residentKey: "preferred"
-                              },
-                              timeout: 60000,
-                              attestation: "direct"
-                            }
-                          }) as PublicKeyCredential;
-
-                          if (credential && credential.response) {
-                            const attestationResponse = credential.response as AuthenticatorAttestationResponse;
-                            
-                            // Register the passkey with Turnkey
-                            const registerResponse = await fetch('/api/register-passkey', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                email,
-                                subOrganizationId,
-                                userId: email, // Use email as userId
-                                credentialId: credential.id,
-                                attestationObject: btoa(String.fromCharCode(...new Uint8Array(attestationResponse.attestationObject))),
-                                clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(attestationResponse.clientDataJSON))),
-                              }),
-                            });
-
-                            if (!registerResponse.ok) {
-                              throw new Error('Failed to register passkey with Turnkey');
-                            }
-
-                            console.log('Passkey created and registered with Turnkey successfully');
-                            await refreshSession();
-                            onAuthSuccess?.();
-                            onClose();
-                          }
-                        } catch (err) {
-                          setError(err instanceof Error ? err.message : 'Failed to create passkey');
-                        } finally {
-                          setIsLoading(false);
-                        }
-                      }}
-                      disabled={!email || isLoading}
-                      className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 font-semibold transition-colors"
-                    >
-                      {isLoading ? 'Creating Account...' : 'Create Account with Passkey'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleEmailSubmit}
-                      disabled={!email || isLoading}
-                      className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-semibold transition-colors"
-                    >
-                      {isLoading ? 'Sending...' : 'Send Verification Code'}
-                    </button>
-                  )}
+                  <button
+                    onClick={handleEmailSubmit}
+                    disabled={!email || isLoading}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-semibold transition-colors"
+                  >
+                    {isLoading ? 'Sending...' : 'Send Verification Code'}
+                  </button>
                 </>
               )}
 

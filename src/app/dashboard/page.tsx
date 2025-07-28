@@ -1,11 +1,45 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import MessageSigningCard from "@/components/MessageSigningCard";
 
 interface WalletInfo {
+  id: string;
+  name: string;
+  accounts: {
+    address: string;
+    blockchain: string;
+    curveType: string;
+    addressFormat: string;
+  }[];
+  createdAt: string;
+  primaryBlockchain: string;
+  error?: string;
+}
+
+interface WalletAssets {
+  walletId: string;
+  address: string;
+  blockchain: string;
+  assets: {
+    symbol: string;
+    name: string;
+    balance: string;
+    value: number;
+    price: number;
+    change24h: number;
+    icon: string;
+  }[];
+  nfts: { tokenId: string; name: string; collection: string; image: string; contractAddress: string }[];
+  totalValue: number;
+  assetCount: number;
+  nftCount: number;
+  lastUpdated: string;
+}
+
+interface SelectedWallet {
   walletId: string;
   address: string;
   activity?: unknown;
@@ -33,8 +67,18 @@ export default function Dashboard() {
   const router = useRouter();
   const { user, isAuthenticated, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<'portfolio' | 'transactions' | 'settings'>('portfolio');
-  const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
+  const [wallets, setWallets] = useState<WalletInfo[]>([]);
+  const [selectedWallet, setSelectedWallet] = useState<SelectedWallet | null>(null);
+  const [showCreateWallet, setShowCreateWallet] = useState(false);
+  const [newWalletName, setNewWalletName] = useState('');
+  const [selectedWalletAssets, setSelectedWalletAssets] = useState<WalletAssets | null>(null);
+  const [showWalletDetails, setShowWalletDetails] = useState(false);
+  const [assetsLoading, setAssetsLoading] = useState(false);
+  const [showClaimWallet, setShowClaimWallet] = useState(false);
+  const [allWallets, setAllWallets] = useState<{ id: string; name: string; createdAt: string; isMine: boolean; exported: boolean; imported: boolean }[]>([]);
+  const [claimLoading, setClaimLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [walletsLoading, setWalletsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
   // Mock portfolio data
@@ -47,67 +91,118 @@ export default function Dashboard() {
 
   const totalPortfolioValue = tokenBalances.reduce((sum, token) => sum + token.value, 0);
 
+  const loadWallets = useCallback(async () => {
+    setWalletsLoading(true);
+    try {
+      const response = await fetch('/api/list-wallets', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setWallets(data.wallets);
+        // Auto-select first wallet if available
+        if (data.wallets.length > 0 && !selectedWallet) {
+          const firstWallet = data.wallets[0];
+          const address = firstWallet.accounts?.[0]?.address;
+          if (address) {
+            setSelectedWallet({
+              walletId: firstWallet.id,
+              address: address,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading wallets:', error);
+    } finally {
+      setWalletsLoading(false);
+    }
+  }, [selectedWallet]);
+
+  // Load wallets on component mount
+  useEffect(() => {
+    loadWallets();
+  }, [loadWallets]);
+
   const createWallet = async () => {
+    if (!newWalletName.trim()) {
+      alert('Please enter a wallet name');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await fetch("/api/create-wallet", {
-        method: "POST",
+      const response = await fetch('/api/create-wallet', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          walletName: `defi-wallet-${Date.now()}`,
+          walletName: newWalletName.trim(),
         }),
       });
 
       const data = await response.json();
       
-      if (response.ok) {
-        const walletId = data.activity?.result?.createWalletResult?.walletId;
-        const address = data.activity?.result?.createWalletResult?.addresses?.[0];
+      if (data.success) {
+        // Reload wallets to show the new one
+        await loadWallets();
         
-        setWalletInfo({
-          walletId,
-          address,
-          activity: data.activity
-        });
+        // Set as selected wallet
+        const address = data.wallet.addresses?.[0];
+        if (address) {
+          setSelectedWallet({
+            walletId: data.wallet.id,
+            address: address,
+          });
+        }
         
         // Add wallet creation transaction
         const newTransaction: Transaction = {
           id: `tx-${Date.now()}`,
           type: 'receive',
-          amount: '0.00',
-          token: 'ETH',
+          amount: 'New wallet created',
+          token: 'WALLET',
           timestamp: new Date().toISOString(),
           status: 'completed'
         };
         setTransactions(prev => [newTransaction, ...prev]);
+        
+        // Reset form
+        setNewWalletName('');
+        setShowCreateWallet(false);
+        
+        alert(`Wallet "${data.wallet.name}" created successfully!`);
+      } else {
+        alert(`Failed to create wallet: ${data.error}`);
       }
     } catch (error) {
-      console.error("Error creating wallet:", error);
+      console.error('Error creating wallet:', error);
+      alert('Failed to create wallet. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const signMessage = async (messageToSign: string, scenario: string) => {
-    if (!walletInfo) {
-      alert("Please create a wallet first");
+    if (!selectedWallet) {
+      alert('Please select a wallet first');
       return;
     }
 
     setLoading(true);
     
     try {
-      const response = await fetch("/api/sign-message", {
-        method: "POST",
+      const response = await fetch('/api/sign-message', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           message: messageToSign,
-          walletId: walletInfo.walletId,
-          address: walletInfo.address,
+          walletId: selectedWallet.walletId,
+          address: selectedWallet.address,
         }),
       });
 
@@ -127,10 +222,111 @@ export default function Dashboard() {
         setTransactions(prev => [newTransaction, ...prev]);
       }
     } catch (error) {
-      console.error("Error signing message:", error);
+      console.error('Error signing message:', error);
       throw error; // Re-throw so the component can handle it
     } finally {
       setLoading(false);
+    }
+  };
+
+  const selectWallet = (wallet: WalletInfo) => {
+    const address = wallet.accounts?.[0]?.address;
+    if (address) {
+      setSelectedWallet({
+        walletId: wallet.id,
+        address: address,
+      });
+    }
+  };
+
+  const loadAllWallets = async () => {
+    setClaimLoading(true);
+    try {
+      const response = await fetch('/api/all-wallets', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        setAllWallets(data.wallets);
+        if (data.wallets.length > 0) {
+          setShowClaimWallet(true);
+        } else {
+          alert('No wallets found in the organization');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading all wallets:', error);
+      alert('Failed to load wallets');
+    } finally {
+      setClaimLoading(false);
+    }
+  };
+
+  const claimWallet = async (walletId: string) => {
+    setClaimLoading(true);
+    try {
+      const response = await fetch('/api/claim-wallet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ walletId }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`Successfully claimed wallet: ${walletId}`);
+        setShowClaimWallet(false);
+        // Reload user's wallets
+        await loadWallets();
+      } else {
+        alert(`Failed to claim wallet: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error claiming wallet:', error);
+      alert('Failed to claim wallet');
+    } finally {
+      setClaimLoading(false);
+    }
+  };
+
+  const viewWalletDetails = async (wallet: WalletInfo) => {
+    const primaryAccount = wallet.accounts?.[0];
+    if (!primaryAccount?.address) {
+      alert('No address found for this wallet');
+      return;
+    }
+
+    setAssetsLoading(true);
+    setShowWalletDetails(true);
+    
+    try {
+      const response = await fetch('/api/wallet-assets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletId: wallet.id,
+          address: primaryAccount.address,
+          blockchain: primaryAccount.blockchain,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setSelectedWalletAssets(data.data);
+      } else {
+        alert(`Failed to load wallet assets: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error fetching wallet assets:', error);
+      alert('Failed to load wallet assets. Please try again.');
+    } finally {
+      setAssetsLoading(false);
     }
   };
 
@@ -189,14 +385,20 @@ export default function Dashboard() {
                   </p>
                 </div>
               )}
-              {walletInfo && (
+              {selectedWallet && (
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-900">
-                    {walletInfo.address.slice(0, 6)}...{walletInfo.address.slice(-4)}
+                    {selectedWallet.address.slice(0, 6)}...{selectedWallet.address.slice(-4)}
                   </p>
                   <p className="text-xs text-green-600">● Wallet Connected</p>
                 </div>
               )}
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">
+                  {wallets.length} Wallet{wallets.length !== 1 ? 's' : ''}
+                </p>
+                <p className="text-xs text-blue-600">● {walletsLoading ? 'Loading...' : 'Ready'}</p>
+              </div>
               <div className="flex space-x-2">
                 <button
                   onClick={goBack}
@@ -219,30 +421,207 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Wallet Connection Banner */}
-        {!walletInfo && (
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 mb-8 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Welcome to DeFi Portfolio</h2>
-                <p className="text-blue-100 mb-4">
-                  Create your secure wallet powered by Turnkey&apos;s infrastructure to start managing your DeFi assets.
-                </p>
+        {/* Wallet Management Section */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Wallet Management</h2>
+              <p className="text-gray-600 mt-1">
+                {walletsLoading ? 'Loading wallets...' : 
+                 wallets.length === 0 ? 'No wallets found. Create your first wallet to get started.' :
+                 `You have ${wallets.length} wallet${wallets.length !== 1 ? 's' : ''}.`}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCreateWallet(true)}
+              disabled={loading || walletsLoading}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 transition-all"
+            >
+              + Create New Wallet
+            </button>
+          </div>
+
+          {/* Wallet List */}
+          {walletsLoading ? (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">⏳</div>
+              <p className="text-gray-500">Loading your wallets...</p>
+            </div>
+          ) : wallets.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-lg">
+              <div className="text-6xl mb-4 opacity-50">🛡️</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Wallets Yet</h3>
+              <p className="text-gray-600 mb-4">Create your first secure wallet or claim an existing one.</p>
+              <div className="flex justify-center space-x-4">
                 <button
-                  onClick={createWallet}
-                  disabled={loading}
-                  className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 disabled:opacity-50"
+                  onClick={() => setShowCreateWallet(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
                 >
-                  {loading ? "Creating Wallet..." : "Create Secure Wallet"}
+                  Create New Wallet
+                </button>
+                <button
+                  onClick={loadAllWallets}
+                  disabled={claimLoading}
+                  className="bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-700 transition-all disabled:opacity-50"
+                >
+                  {claimLoading ? 'Loading...' : 'Claim Existing Wallet'}
                 </button>
               </div>
-              <div className="text-6xl opacity-20">🛡️</div>
+              <p className="text-xs text-gray-500 mt-4">
+                If you created a wallet before, you can claim it to see it here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {wallets.map((wallet) => {
+                const isSelected = selectedWallet?.walletId === wallet.id;
+                const primaryAccount = wallet.accounts?.[0];
+                
+                return (
+                  <div
+                    key={wallet.id}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      isSelected 
+                        ? 'border-blue-500 bg-blue-50 shadow-md' 
+                        : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 truncate">{wallet.name}</h3>
+                      {isSelected && (
+                        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                          Selected
+                        </span>
+                      )}
+                    </div>
+                    
+                    {primaryAccount?.address ? (
+                      <div className="space-y-2">
+                        {/* Blockchain Type */}
+                        <div className="flex items-center space-x-2">
+                          <span className="text-lg">
+                            {wallet.primaryBlockchain === 'Ethereum' ? '🟢' :
+                             wallet.primaryBlockchain === 'Bitcoin' ? '🟠' :
+                             wallet.primaryBlockchain === 'Solana' ? '🟣' : '⚪'}
+                          </span>
+                          <span className="text-sm font-medium text-gray-700">
+                            {wallet.primaryBlockchain}
+                          </span>
+                        </div>
+                        
+                        {/* Address */}
+                        <p className="text-sm text-gray-600 font-mono bg-gray-100 p-2 rounded">
+                          {primaryAccount.address.slice(0, 12)}...{primaryAccount.address.slice(-8)}
+                        </p>
+                        
+                        {/* Account info */}
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>{wallet.accounts.length} account{wallet.accounts.length !== 1 ? 's' : ''}</span>
+                          <span>{primaryAccount.curveType}</span>
+                        </div>
+                        
+                        <p className="text-xs text-gray-400">
+                          Created: {new Date(wallet.createdAt).toLocaleDateString()}
+                        </p>
+                        
+                        {/* Action buttons */}
+                        <div className="flex space-x-2 mt-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              selectWallet(wallet);
+                            }}
+                            className={`flex-1 text-xs py-2 px-3 rounded transition-colors ${
+                              isSelected
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            {isSelected ? 'Selected' : 'Select'}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              viewWalletDetails(wallet);
+                            }}
+                            className="flex-1 text-xs py-2 px-3 rounded bg-green-500 text-white hover:bg-green-600 transition-colors"
+                          >
+                            View Assets
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-red-500">
+                        {wallet.error || 'No accounts found'}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Create Wallet Modal */}
+        {showCreateWallet && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">Create New Wallet</h3>
+                  <button
+                    onClick={() => {
+                      setShowCreateWallet(false);
+                      setNewWalletName('');
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Wallet Name
+                    </label>
+                    <input
+                      type="text"
+                      value={newWalletName}
+                      onChange={(e) => setNewWalletName(e.target.value)}
+                      placeholder="e.g., My DeFi Wallet"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      autoFocus
+                      onKeyPress={(e) => e.key === 'Enter' && createWallet()}
+                    />
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => {
+                        setShowCreateWallet(false);
+                        setNewWalletName('');
+                      }}
+                      className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={createWallet}
+                      disabled={loading || !newWalletName.trim()}
+                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 transition-all"
+                    >
+                      {loading ? 'Creating...' : 'Create Wallet'}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {/* Main Content */}
-        {walletInfo && (
+        {selectedWallet && (
           <>
             {/* Portfolio Overview */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
@@ -431,6 +810,214 @@ export default function Dashboard() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Wallet Details Modal */}
+        {showWalletDetails && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="p-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      {selectedWalletAssets?.walletId ? 
+                        wallets.find(w => w.id === selectedWalletAssets.walletId)?.name || 'Wallet Details' :
+                        'Wallet Details'
+                      }
+                    </h3>
+                    {selectedWalletAssets && (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <span className="text-lg">
+                          {selectedWalletAssets.blockchain === 'Ethereum' ? '🟢' :
+                           selectedWalletAssets.blockchain === 'Bitcoin' ? '🟠' :
+                           selectedWalletAssets.blockchain === 'Solana' ? '🟣' : '⚪'}
+                        </span>
+                        <span className="text-gray-600">{selectedWalletAssets.blockchain}</span>
+                        <span className="text-gray-400">•</span>
+                        <span className="text-sm text-gray-500 font-mono">
+                          {selectedWalletAssets.address.slice(0, 16)}...{selectedWalletAssets.address.slice(-12)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowWalletDetails(false);
+                      setSelectedWalletAssets(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {assetsLoading ? (
+                  <div className="text-center py-12">
+                    <div className="text-4xl mb-4">⏳</div>
+                    <p className="text-gray-500">Loading wallet assets...</p>
+                  </div>
+                ) : selectedWalletAssets ? (
+                  <div className="space-y-6">
+                    {/* Portfolio Overview */}
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900">Total Portfolio Value</h4>
+                          <p className="text-3xl font-bold text-gray-900 mt-1">
+                            ${selectedWalletAssets.totalValue.toLocaleString('en-US', { 
+                              minimumFractionDigits: 2, 
+                              maximumFractionDigits: 2 
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-600">{selectedWalletAssets.assetCount} Assets</p>
+                          {selectedWalletAssets.nftCount > 0 && (
+                            <p className="text-sm text-gray-600">{selectedWalletAssets.nftCount} NFTs</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Assets List */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Assets</h4>
+                      <div className="space-y-3">
+                        {selectedWalletAssets.assets.map((asset, index) => (
+                          <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div className="flex items-center space-x-4">
+                              <span className="text-2xl">{asset.icon}</span>
+                              <div>
+                                <p className="font-semibold text-gray-900">{asset.symbol}</p>
+                                <p className="text-sm text-gray-600">{asset.name}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-gray-900">{asset.balance} {asset.symbol}</p>
+                              <p className="text-sm text-gray-600">
+                                ${asset.value.toLocaleString('en-US', { 
+                                  minimumFractionDigits: 2, 
+                                  maximumFractionDigits: 2 
+                                })}
+                              </p>
+                              <p className={`text-xs ${asset.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {asset.change24h >= 0 ? '+' : ''}{asset.change24h}% (24h)
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* NFTs */}
+                    {selectedWalletAssets.nfts.length > 0 && (
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-4">NFTs</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          {selectedWalletAssets.nfts.map((nft, index) => (
+                            <div key={index} className="bg-gray-50 rounded-lg p-3">
+                              <div className="aspect-square bg-gray-200 rounded-lg mb-2 flex items-center justify-center">
+                                <span className="text-4xl">🖼️</span>
+                              </div>
+                              <p className="font-medium text-sm text-gray-900 truncate">{nft.name}</p>
+                              <p className="text-xs text-gray-600 truncate">{nft.collection}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Last Updated */}
+                    <div className="text-center text-xs text-gray-400 pt-4 border-t">
+                      Last updated: {selectedWalletAssets.lastUpdated ? 
+                        new Date(selectedWalletAssets.lastUpdated).toLocaleString() : 
+                        'Just now'
+                      }
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-4xl mb-4">❌</div>
+                    <p className="text-gray-500">Failed to load wallet assets</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Claim Wallet Modal */}
+        {showClaimWallet && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-4xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">Claim Your Wallet</h3>
+                  <button
+                    onClick={() => {
+                      setShowClaimWallet(false);
+                      setAllWallets([]);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <p className="text-gray-600 mb-6">
+                  Select the wallet you created to claim it. You&apos;ll only see wallets you claim.
+                </p>
+
+                {claimLoading ? (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">⏳</div>
+                    <p className="text-gray-500">Loading wallets...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {allWallets.map((wallet) => (
+                      <div
+                        key={wallet.id}
+                        className={`p-4 rounded-lg border-2 ${
+                          wallet.isMine 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{wallet.name}</h4>
+                            <p className="text-sm text-gray-600">ID: {wallet.id.slice(0, 8)}...{wallet.id.slice(-6)}</p>
+                            <p className="text-xs text-gray-500">
+                              Created: {new Date(wallet.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {wallet.isMine ? (
+                            <span className="bg-green-500 text-white px-4 py-2 rounded text-sm">
+                              Already Claimed
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => claimWallet(wallet.id)}
+                              disabled={claimLoading}
+                              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 text-sm"
+                            >
+                              Claim This Wallet
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-6 text-center text-sm text-gray-500">
+                  Only claim wallets that you created. Claiming someone else&apos;s wallet won&apos;t give you access to it.
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
