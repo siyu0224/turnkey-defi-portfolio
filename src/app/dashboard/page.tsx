@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import MessageSigningCard from "@/components/MessageSigningCard";
+import TransactionAutomation from "@/components/TransactionAutomation";
 
 interface WalletInfo {
   id: string;
@@ -68,7 +69,7 @@ export default function Dashboard() {
   const router = useRouter();
   const { user, isAuthenticated, signOut } = useAuth();
   const { wallets, setWallets, activeWallet, setActiveWallet } = useWallet();
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'transactions' | 'settings'>('portfolio');
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'transactions' | 'automation' | 'settings'>('portfolio');
   const [selectedWallet, setSelectedWallet] = useState<SelectedWallet | null>(null);
   const [showCreateWallet, setShowCreateWallet] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
@@ -735,11 +736,12 @@ export default function Dashboard() {
                   {[
                     { id: 'portfolio', label: 'Portfolio', icon: '📊' },
                     { id: 'transactions', label: 'Transactions', icon: '📝' },
+                    { id: 'automation', label: 'Automation', icon: '🤖' },
                     { id: 'settings', label: 'Security', icon: '🔒' }
                   ].map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id as 'portfolio' | 'transactions' | 'settings')}
+                      onClick={() => setActiveTab(tab.id as 'portfolio' | 'transactions' | 'automation' | 'settings')}
                       className={`flex items-center space-x-2 py-4 px-2 border-b-2 text-sm font-medium ${
                         activeTab === tab.id
                           ? 'border-blue-500 text-blue-600'
@@ -839,6 +841,11 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Automation Tab */}
+                {activeTab === 'automation' && (
+                  <TransactionAutomation />
                 )}
 
                 {/* Security Tab */}
