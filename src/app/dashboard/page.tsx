@@ -104,7 +104,8 @@ export default function Dashboard() {
   const loadWallets = useCallback(async () => {
     setWalletsLoading(true);
     try {
-      const response = await fetch('/api/list-wallets', {
+      // First try simple list without details
+      const response = await fetch('/api/list-wallets-simple', {
         method: 'POST',
       });
       const data = await response.json();
@@ -457,13 +458,26 @@ export default function Dashboard() {
                  `You have ${wallets.length} wallet${wallets.length !== 1 ? 's' : ''}.`}
               </p>
             </div>
-            <button
-              onClick={() => setShowCreateWallet(true)}
-              disabled={loading || walletsLoading}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 transition-all"
-            >
-              + Create New Wallet
-            </button>
+            <div className="flex space-x-4">
+              <button
+                onClick={async () => {
+                  const res = await fetch('/api/debug-wallets');
+                  const data = await res.json();
+                  console.log('Debug response:', data);
+                  alert(JSON.stringify(data, null, 2));
+                }}
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm"
+              >
+                Debug API
+              </button>
+              <button
+                onClick={() => setShowCreateWallet(true)}
+                disabled={loading || walletsLoading}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 transition-all"
+              >
+                + Create New Wallet
+              </button>
+            </div>
           </div>
 
           {/* Wallet List */}
