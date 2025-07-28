@@ -49,7 +49,7 @@ export default function TransactionAutomation() {
     type: 'dca' as const,
     asset: 'ETH',
     amount: '',
-    frequency: 'weekly' as const,
+    frequency: 'weekly' as 'daily' | 'weekly' | 'monthly',
     totalBudget: '',
     maxGasPrice: '50'
   });
