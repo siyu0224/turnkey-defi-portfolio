@@ -480,6 +480,17 @@ export default function Dashboard() {
                 Debug API
               </button>
               <button
+                onClick={async () => {
+                  const res = await fetch('/api/test-wallet-structure');
+                  const data = await res.json();
+                  console.log('Wallet structure:', data);
+                  alert(JSON.stringify(data.walletStructure, null, 2));
+                }}
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm"
+              >
+                Test Wallet
+              </button>
+              <button
                 onClick={() => setShowCreateWallet(true)}
                 disabled={loading || walletsLoading}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 transition-all"

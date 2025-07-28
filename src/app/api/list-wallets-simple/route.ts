@@ -32,13 +32,21 @@ export async function POST() {
     const walletsWithAddresses = await Promise.all(
       response.wallets.map(async (wallet) => {
         try {
-          // Try to get wallet accounts/addresses
-          const walletAccounts = await turnkeyClient.getWalletAccounts({
+          // Get full wallet details
+          const walletDetails = await turnkeyClient.getWallet({
             organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
             walletId: wallet.walletId,
           });
 
-          const accounts = walletAccounts.accounts.map(acc => ({
+          // Extract accounts from wallet details
+          const walletData = walletDetails.wallet as any;
+          
+          // Log first wallet details for debugging
+          if (wallet.walletName === 'wallet aaa' || wallet.walletName === 'wallet bbb') {
+            console.log(`Wallet ${wallet.walletName} details:`, JSON.stringify(walletData, null, 2));
+          }
+          
+          const accounts = (walletData.accounts || []).map((acc: any) => ({
             address: acc.address || 'No address',
             blockchain: acc.addressFormat === 'ADDRESS_FORMAT_ETHEREUM' ? 'Ethereum' : 
                        acc.addressFormat === 'ADDRESS_FORMAT_BITCOIN' ? 'Bitcoin' : 
