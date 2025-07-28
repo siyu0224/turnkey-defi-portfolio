@@ -41,8 +41,9 @@ export async function POST(request: NextRequest) {
         parameters: {
           policyName: `Test - ${walletName || walletId} - ${Date.now()}`,
           effect: "EFFECT_DENY",
-          condition: `activity.type == "ACTIVITY_TYPE_SIGN_TRANSACTION_V2" && activity.parameters.value > 1000000000000000000`,
+          condition: `activity.resource == 'TRANSACTION' && activity.action == 'SIGN'`,
           notes: `Test policy for wallet ${walletId}`,
+          consensus: "true",
         },
       });
       
@@ -70,8 +71,9 @@ export async function POST(request: NextRequest) {
         parameters: {
           policyName: `Wallet Specific - ${walletName || walletId} - ${Date.now()}`,
           effect: "EFFECT_DENY",
-          condition: `activity.type == "ACTIVITY_TYPE_SIGN_TRANSACTION_V2" && activity.resource.walletId == "${walletId}" && activity.parameters.value > 1000000000000000000`,
+          condition: `activity.resource == 'WALLET' && activity.resource.walletId == '${walletId}'`,
           notes: `Wallet-specific policy for ${walletId}`,
+          consensus: "true",
         },
       });
       
@@ -90,17 +92,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Approach 3: Try with organizationId in condition
+    // Approach 3: Try simple allow-all like existing policies
     try {
       const orgPolicy = await turnkeyClient.createPolicy({
         type: "ACTIVITY_TYPE_CREATE_POLICY_V3",
         timestampMs: Date.now().toString(),
         organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
         parameters: {
-          policyName: `Org Wallet - ${walletName || walletId} - ${Date.now()}`,
-          effect: "EFFECT_DENY",
-          condition: `activity.type == "ACTIVITY_TYPE_SIGN_TRANSACTION_V2" && activity.organizationId == "${process.env.TURNKEY_ORGANIZATION_ID}" && activity.parameters.value > 1000000000000000000`,
-          notes: `Organization-scoped policy for wallet ${walletId}`,
+          policyName: `Simple True - ${walletName || walletId} - ${Date.now()}`,
+          effect: "EFFECT_ALLOW",
+          condition: "true",
+          notes: `Simple allow policy for wallet ${walletId}`,
+          consensus: "true",
         },
       });
       
