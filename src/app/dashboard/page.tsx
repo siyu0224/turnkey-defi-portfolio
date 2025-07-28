@@ -204,7 +204,12 @@ export default function Dashboard() {
   };
 
   const signMessage = async (messageToSign: string, scenario: string) => {
-    if (!selectedWallet) {
+    const walletToUse = selectedWallet || (activeWallet ? {
+      walletId: activeWallet.id,
+      address: activeWallet.accounts?.[0]?.address || ''
+    } : null);
+
+    if (!walletToUse) {
       alert('Please select a wallet first');
       return;
     }
@@ -219,8 +224,8 @@ export default function Dashboard() {
         },
         body: JSON.stringify({
           message: messageToSign,
-          walletId: selectedWallet.walletId,
-          address: selectedWallet.address,
+          walletId: walletToUse.walletId,
+          address: walletToUse.address,
         }),
       });
 
@@ -626,7 +631,7 @@ export default function Dashboard() {
         )}
 
         {/* Main Content */}
-        {selectedWallet && (
+        {(selectedWallet || activeWallet) && (
           <>
             {/* Portfolio Overview */}
             <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
