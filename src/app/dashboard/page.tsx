@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWallet } from "@/contexts/WalletContext";
 import MessageSigningCard from "@/components/MessageSigningCard";
+import WalletSwitcher from "@/components/WalletSwitcher";
 
 interface WalletInfo {
   id: string;
@@ -66,8 +68,8 @@ interface Transaction {
 export default function Dashboard() {
   const router = useRouter();
   const { user, isAuthenticated, signOut } = useAuth();
+  const { wallets, setWallets, activeWallet, setActiveWallet } = useWallet();
   const [activeTab, setActiveTab] = useState<'portfolio' | 'transactions' | 'settings'>('portfolio');
-  const [wallets, setWallets] = useState<WalletInfo[]>([]);
   const [selectedWallet, setSelectedWallet] = useState<SelectedWallet | null>(null);
   const [showCreateWallet, setShowCreateWallet] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
@@ -102,8 +104,9 @@ export default function Dashboard() {
       if (data.success) {
         setWallets(data.wallets);
         // Auto-select first wallet if available
-        if (data.wallets.length > 0 && !selectedWallet) {
+        if (data.wallets.length > 0 && !activeWallet) {
           const firstWallet = data.wallets[0];
+          setActiveWallet(firstWallet);
           const address = firstWallet.accounts?.[0]?.address;
           if (address) {
             setSelectedWallet({
@@ -118,12 +121,25 @@ export default function Dashboard() {
     } finally {
       setWalletsLoading(false);
     }
-  }, [selectedWallet]);
+  }, [selectedWallet, activeWallet, setActiveWallet]);
 
   // Load wallets on component mount
   useEffect(() => {
     loadWallets();
   }, [loadWallets]);
+
+  // Sync selectedWallet with activeWallet
+  useEffect(() => {
+    if (activeWallet) {
+      const address = activeWallet.accounts?.[0]?.address;
+      if (address) {
+        setSelectedWallet({
+          walletId: activeWallet.id,
+          address: address,
+        });
+      }
+    }
+  }, [activeWallet]);
 
   const createWallet = async () => {
     if (!newWalletName.trim()) {
@@ -149,13 +165,11 @@ export default function Dashboard() {
         // Reload wallets to show the new one
         await loadWallets();
         
-        // Set as selected wallet
-        const address = data.wallet.addresses?.[0];
-        if (address) {
-          setSelectedWallet({
-            walletId: data.wallet.id,
-            address: address,
-          });
+        // Reload and set as active wallet
+        const updatedWallets = await loadWallets();
+        const newWalletInfo = wallets.find(w => w.id === data.wallet.id);
+        if (newWalletInfo) {
+          setActiveWallet(newWalletInfo);
         }
         
         // Add wallet creation transaction
@@ -230,13 +244,7 @@ export default function Dashboard() {
   };
 
   const selectWallet = (wallet: WalletInfo) => {
-    const address = wallet.accounts?.[0]?.address;
-    if (address) {
-      setSelectedWallet({
-        walletId: wallet.id,
-        address: address,
-      });
-    }
+    setActiveWallet(wallet);
   };
 
   const loadAllWallets = async () => {
@@ -385,14 +393,7 @@ export default function Dashboard() {
                   </p>
                 </div>
               )}
-              {selectedWallet && (
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {selectedWallet.address.slice(0, 6)}...{selectedWallet.address.slice(-4)}
-                  </p>
-                  <p className="text-xs text-green-600">● Wallet Connected</p>
-                </div>
-              )}
+              <WalletSwitcher />
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">
                   {wallets.length} Wallet{wallets.length !== 1 ? 's' : ''}
@@ -474,7 +475,7 @@ export default function Dashboard() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {wallets.map((wallet) => {
-                const isSelected = selectedWallet?.walletId === wallet.id;
+                const isSelected = activeWallet?.id === wallet.id;
                 const primaryAccount = wallet.accounts?.[0];
                 
                 return (

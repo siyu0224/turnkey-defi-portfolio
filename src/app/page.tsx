@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import ImprovedAuthModal from "@/components/ImprovedAuthModal";
+import WalletIndicator from "@/components/WalletIndicator";
 
 export default function Home() {
   const router = useRouter();
@@ -33,6 +34,11 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
       <div className="relative overflow-hidden">
+        {/* Wallet Indicator in top right */}
+        <div className="absolute top-4 right-4">
+          <WalletIndicator />
+        </div>
+        
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
           <div className="text-center">
             <div className="flex justify-center mb-8">

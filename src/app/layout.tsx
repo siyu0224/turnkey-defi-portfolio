@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import TurnkeyWrapper from "@/components/TurnkeyWrapper";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { WalletProvider } from "@/contexts/WalletContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,12 +31,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <TurnkeyWrapper
-            apiBaseUrl={process.env.NEXT_PUBLIC_BASE_URL!}
-            organizationId={process.env.NEXT_PUBLIC_ORGANIZATION_ID!}
-          >
-            {children}
-          </TurnkeyWrapper>
+          <WalletProvider>
+            <TurnkeyWrapper
+              apiBaseUrl={process.env.NEXT_PUBLIC_BASE_URL!}
+              organizationId={process.env.NEXT_PUBLIC_ORGANIZATION_ID!}
+            >
+              {children}
+            </TurnkeyWrapper>
+          </WalletProvider>
         </AuthProvider>
       </body>
     </html>
