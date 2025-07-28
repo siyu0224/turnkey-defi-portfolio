@@ -40,13 +40,11 @@ export async function POST(request: NextRequest) {
       throw new Error("No accounts found for this wallet");
     }
 
-    // Find the account for the specified blockchain
-    const selectedBlockchain = chain ? BLOCKCHAIN_MAPPING[chain as keyof typeof BLOCKCHAIN_MAPPING] : "BLOCKCHAIN_ETHEREUM";
-    const account = accountsResponse.accounts.find(acc => acc.blockchain === selectedBlockchain) 
-                    || accountsResponse.accounts[0]; // Fallback to first account
-    
+    // For EVM chains, we use the same address across all chains
+    // Just use the first account since EVM addresses are chain-agnostic
+    const account = accountsResponse.accounts[0];
     const signingAddress = account.address;
-    console.log("Using address for signing on", selectedBlockchain, ":", signingAddress);
+    console.log("Using address for signing:", signingAddress, "on chain:", chain || "ethereum");
 
     // Convert message to hex payload
     const encoder = new TextEncoder();
