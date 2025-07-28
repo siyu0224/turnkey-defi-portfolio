@@ -38,9 +38,13 @@ export default function DCAStrategyCard({ strategy, onExecute, executing }: DCAS
       {/* Associated Policy */}
       <div className="bg-blue-50 rounded-lg p-3 mb-4">
         <p className="text-xs text-blue-700">
-          <strong>Policy:</strong> This strategy has an associated Turnkey policy that allows automated transaction signing. 
-          The actual execution rules above are enforced by the application.
+          <strong>Policy:</strong> This strategy has a Turnkey policy with transaction-level controls:
         </p>
+        <ul className="text-xs text-blue-600 mt-1 ml-4 list-disc">
+          <li>Max gas price: {strategy.config.maxGasPrice} Gwei (enforced by policy)</li>
+          <li>Transaction routing: DEX router only (enforced by policy)</li>
+          <li>Amount limits: Application-enforced via transaction guards</li>
+        </ul>
       </div>
 
       {/* Progress Bar */}

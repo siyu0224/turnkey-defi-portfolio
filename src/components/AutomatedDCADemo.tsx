@@ -167,6 +167,11 @@ export default function AutomatedDCADemo() {
         body: JSON.stringify({
           strategyName: newStrategy.name,
           chain: selectedChain,
+          maxGasPrice: newStrategy.config.maxGasPrice,
+          maxAmount: newStrategy.config.amount,
+          fromToken: newStrategy.config.fromToken,
+          toToken: newStrategy.config.toToken,
+          targetContract: chains[selectedChain].dexRouter, // Use chain-specific DEX router
         }),
       });
 
