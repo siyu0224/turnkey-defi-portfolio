@@ -19,7 +19,11 @@ export async function POST(request: NextRequest) {
     const activitiesResponse = await turnkeyClient.getActivities({
       organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
       filterByType: ["ACTIVITY_TYPE_CREATE_WALLET"],
-      limit: 100,
+      paginationOptions: {
+        limit: "100",
+        before: undefined,
+        after: undefined
+      }
     });
 
     // Find the activity that created this wallet
