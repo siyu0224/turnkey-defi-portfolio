@@ -82,14 +82,23 @@ export default function Dashboard() {
   const [walletsLoading, setWalletsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   
-  // Mock portfolio data
-  const [tokenBalances] = useState<TokenBalance[]>([
-    { symbol: 'ETH', balance: '2.453', value: 4200.45, change24h: 3.2, icon: '🟢' },
-    { symbol: 'USDC', balance: '1500.00', value: 1500.00, change24h: 0.1, icon: '🔵' },
-    { symbol: 'UNI', balance: '45.8', value: 320.60, change24h: -2.1, icon: '🦄' },
-    { symbol: 'LINK', balance: '78.2', value: 890.34, change24h: 5.4, icon: '🔗' }
-  ]);
+  // Generate different portfolio data for each wallet
+  const getWalletPortfolio = useCallback((walletId: string | undefined) => {
+    if (!walletId) return [];
+    
+    // Use wallet ID to generate deterministic but different data
+    const seed = walletId.charCodeAt(0) + walletId.charCodeAt(1);
+    const multiplier = (seed % 10) / 10 + 0.5; // 0.5 to 1.5
+    
+    return [
+      { symbol: 'ETH', balance: (1.5 * multiplier).toFixed(3), value: 2500 * multiplier, change24h: 3.2, icon: '🟢' },
+      { symbol: 'USDC', balance: (1000 * multiplier).toFixed(2), value: 1000 * multiplier, change24h: 0.1, icon: '🔵' },
+      { symbol: 'UNI', balance: (30 * multiplier).toFixed(1), value: 210 * multiplier, change24h: -2.1, icon: '🦄' },
+      { symbol: 'LINK', balance: (50 * multiplier).toFixed(1), value: 570 * multiplier, change24h: 5.4, icon: '🔗' }
+    ];
+  }, []);
 
+  const tokenBalances = getWalletPortfolio(activeWallet?.id);
   const totalPortfolioValue = tokenBalances.reduce((sum, token) => sum + token.value, 0);
 
   const loadWallets = useCallback(async () => {
