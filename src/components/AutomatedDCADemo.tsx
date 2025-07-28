@@ -7,6 +7,7 @@ import { checkDCAExecutionGuard, logDCAExecution } from "@/lib/dca-transaction-g
 interface DCAStrategy {
   id: string;
   name: string;
+  policyId?: string;
   status: 'active' | 'paused' | 'completed';
   chain: 'ethereum' | 'polygon' | 'arbitrum' | 'base' | 'optimism';
   config: {
