@@ -325,7 +325,7 @@ export default function AutomatedDCADemo() {
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-6 text-white">
         <h3 className="text-2xl font-bold mb-2">Multi-Chain Automated DCA Trading</h3>
         <p className="text-purple-100 mb-4">
-          Set up cross-chain automated trading strategies with Turnkey's policy engine
+          Set up cross-chain automated trading strategies with Turnkey&apos;s policy engine
         </p>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
