@@ -15,6 +15,7 @@ interface WalletInfo {
   accounts: WalletAccount[];
   createdAt: string;
   primaryBlockchain: string;
+  chains?: string[];
   error?: string;
 }
 

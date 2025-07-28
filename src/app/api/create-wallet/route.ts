@@ -65,6 +65,27 @@ export async function POST(request: NextRequest) {
         addWalletOwnership(walletId, currentUserId);
       }
 
+      // Create default policies for Ethereum
+      try {
+        const policyResponse = await fetch(`${request.nextUrl.origin}/api/create-wallet-policies`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            walletId: walletId,
+            walletName: walletName,
+            chains: ['ethereum'], // Default to Ethereum for single-chain wallets
+          }),
+        });
+
+        const policyResult = await policyResponse.json();
+        console.log("Policy creation result:", policyResult);
+      } catch (policyError) {
+        console.error("Error creating policies for wallet:", policyError);
+        // Continue even if policy creation fails
+      }
+
       return NextResponse.json({
         success: true,
         wallet: {

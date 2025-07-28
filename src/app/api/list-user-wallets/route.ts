@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { TurnkeyClient } from "@turnkey/http";
 import { ApiKeyStamper } from "@turnkey/api-key-stamper";
-import { getWalletsByUser } from "@/lib/wallet-storage";
+import { getWalletsByUser, getWalletMetadata } from "@/lib/wallet-storage";
 
 export async function POST() {
   try {
@@ -52,6 +52,9 @@ export async function POST() {
             walletId: wallet.walletId,
           });
 
+          // Get stored metadata for this wallet
+          const metadata = getWalletMetadata(wallet.walletId);
+
           return {
             id: wallet.walletId,
             name: wallet.walletName,
@@ -64,13 +67,16 @@ export async function POST() {
               addressFormat: 'ADDRESS_FORMAT_ETHEREUM',
               curveType: 'secp256k1'
             }],
-            // For EVM wallets, they work across all chains
-            chains: ['ethereum', 'polygon', 'arbitrum', 'base', 'optimism'],
-            primaryBlockchain: 'ethereum',
+            // Use stored chains or default to all EVM chains
+            chains: metadata?.chains || ['ethereum', 'polygon', 'arbitrum', 'base', 'optimism'],
+            primaryBlockchain: metadata?.primaryBlockchain || 'ethereum',
             unclaimed: (wallet as any).unclaimed || false,
           };
         } catch (error) {
           console.log(`Could not get accounts for wallet ${wallet.walletId}, using placeholder`);
+          // Get stored metadata for this wallet
+          const metadata = getWalletMetadata(wallet.walletId);
+          
           // If getWalletAccounts fails, return with placeholder
           return {
             id: wallet.walletId,
@@ -84,8 +90,8 @@ export async function POST() {
               addressFormat: 'ADDRESS_FORMAT_ETHEREUM',
               curveType: 'secp256k1'
             }],
-            chains: ['ethereum'],
-            primaryBlockchain: 'ethereum',
+            chains: metadata?.chains || ['ethereum'],
+            primaryBlockchain: metadata?.primaryBlockchain || 'ethereum',
             unclaimed: (wallet as any).unclaimed || false,
           };
         }

@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import MessageSigningCard from "@/components/MessageSigningCard";
 import TransactionAutomation from "@/components/TransactionAutomation";
+import PolicyManagement from "@/components/PolicyManagement";
 
 interface WalletInfo {
   id: string;
@@ -70,7 +71,7 @@ export default function Dashboard() {
   const router = useRouter();
   const { user, isAuthenticated, signOut } = useAuth();
   const { wallets, setWallets, activeWallet, setActiveWallet } = useWallet();
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'transactions' | 'automation' | 'settings'>('portfolio');
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'transactions' | 'automation' | 'policies' | 'settings'>('portfolio');
   const [selectedWallet, setSelectedWallet] = useState<SelectedWallet | null>(null);
   const [showCreateWallet, setShowCreateWallet] = useState(false);
   const [newWalletName, setNewWalletName] = useState('');
@@ -554,11 +555,13 @@ export default function Dashboard() {
                         {/* Blockchain Type */}
                         <div className="flex items-center space-x-2">
                           <span className="text-lg">
-                            {wallet.primaryBlockchain === 'Ethereum' ? '🟢' :
-                             wallet.primaryBlockchain === 'Bitcoin' ? '🟠' :
-                             wallet.primaryBlockchain === 'Solana' ? '🟣' : '⚪'}
+                            {wallet.primaryBlockchain === 'ethereum' ? '⟠' :
+                             wallet.primaryBlockchain === 'polygon' ? '⬡' :
+                             wallet.primaryBlockchain === 'arbitrum' ? '🔷' :
+                             wallet.primaryBlockchain === 'base' ? '🔵' :
+                             wallet.primaryBlockchain === 'optimism' ? '🔴' : '⚪'}
                           </span>
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm font-medium text-gray-700 capitalize">
                             {wallet.primaryBlockchain}
                           </span>
                         </div>
@@ -578,6 +581,33 @@ export default function Dashboard() {
                           Created: {new Date(wallet.createdAt).toLocaleDateString()}
                         </p>
                         
+                        {/* Show update chain button if wallet has default chains */}
+                        {wallet.chains && wallet.chains.length === 5 && (
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              const selectedChain = prompt('Select primary blockchain: ethereum, polygon, arbitrum, base, or optimism', 'polygon');
+                              if (selectedChain && ['ethereum', 'polygon', 'arbitrum', 'base', 'optimism'].includes(selectedChain)) {
+                                const res = await fetch('/api/update-wallet-chain', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ 
+                                    walletId: wallet.id, 
+                                    chains: [selectedChain]
+                                  })
+                                });
+                                if (res.ok) {
+                                  alert(`Updated ${wallet.name} to ${selectedChain}`);
+                                  loadWallets();
+                                }
+                              }
+                            }}
+                            className="w-full text-xs py-1 px-2 rounded bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-all mb-2"
+                          >
+                            ⚡ Update Chain
+                          </button>
+                        )}
+
                         {/* Action buttons */}
                         <div className="flex space-x-2 mt-3">
                           {(wallet as any).unclaimed ? (
@@ -791,11 +821,12 @@ export default function Dashboard() {
                     { id: 'portfolio', label: 'Portfolio', icon: '📊' },
                     { id: 'transactions', label: 'Transactions', icon: '📝' },
                     { id: 'automation', label: 'Automation', icon: '🤖' },
+                    { id: 'policies', label: 'Policies', icon: '📜' },
                     { id: 'settings', label: 'Security', icon: '🔒' }
                   ].map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => setActiveTab(tab.id as 'portfolio' | 'transactions' | 'automation' | 'settings')}
+                      onClick={() => setActiveTab(tab.id as 'portfolio' | 'transactions' | 'automation' | 'policies' | 'settings')}
                       className={`flex items-center space-x-2 py-4 px-2 border-b-2 text-sm font-medium ${
                         activeTab === tab.id
                           ? 'border-blue-500 text-blue-600'
@@ -902,6 +933,11 @@ export default function Dashboard() {
                   <TransactionAutomation />
                 )}
 
+                {/* Policies Tab */}
+                {activeTab === 'policies' && (
+                  <PolicyManagement />
+                )}
+
                 {/* Security Tab */}
                 {activeTab === 'settings' && (
                   <div className="space-y-6">
@@ -962,11 +998,13 @@ export default function Dashboard() {
                     {selectedWalletAssets && (
                       <div className="flex items-center space-x-2 mt-2">
                         <span className="text-lg">
-                          {selectedWalletAssets.blockchain === 'Ethereum' ? '🟢' :
-                           selectedWalletAssets.blockchain === 'Bitcoin' ? '🟠' :
-                           selectedWalletAssets.blockchain === 'Solana' ? '🟣' : '⚪'}
+                          {selectedWalletAssets.blockchain === 'ethereum' ? '⟠' :
+                           selectedWalletAssets.blockchain === 'polygon' ? '⬡' :
+                           selectedWalletAssets.blockchain === 'arbitrum' ? '🔷' :
+                           selectedWalletAssets.blockchain === 'base' ? '🔵' :
+                           selectedWalletAssets.blockchain === 'optimism' ? '🔴' : '⚪'}
                         </span>
-                        <span className="text-gray-600">{selectedWalletAssets.blockchain}</span>
+                        <span className="text-gray-600 capitalize">{selectedWalletAssets.blockchain}</span>
                         <span className="text-gray-400">•</span>
                         <span className="text-sm text-gray-500 font-mono">
                           {selectedWalletAssets.address.slice(0, 16)}...{selectedWalletAssets.address.slice(-12)}

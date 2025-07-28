@@ -77,9 +77,9 @@ export async function POST(request: NextRequest) {
       const walletId = activity.result?.createWalletResult?.walletId;
       const addresses = activity.result?.createWalletResult?.addresses;
 
-      // Track wallet-user association
+      // Track wallet-user association with chains
       if (walletId) {
-        addWalletOwnership(walletId, currentUserId);
+        addWalletOwnership(walletId, currentUserId, chains);
       }
 
       // Get wallet details with accounts
@@ -87,6 +87,27 @@ export async function POST(request: NextRequest) {
         organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
         walletId: walletId!,
       });
+
+      // Create policies for the new wallet
+      try {
+        const policyResponse = await fetch(`${request.nextUrl.origin}/api/create-wallet-policies`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            walletId: walletId,
+            walletName: walletName,
+            chains: chains,
+          }),
+        });
+
+        const policyResult = await policyResponse.json();
+        console.log("Policy creation result:", policyResult);
+      } catch (policyError) {
+        console.error("Error creating policies for wallet:", policyError);
+        // Continue even if policy creation fails
+      }
 
       return NextResponse.json({
         success: true,
@@ -96,6 +117,7 @@ export async function POST(request: NextRequest) {
           addresses: addresses,
           accounts: walletDetails.accounts,
           chains: chains,
+          primaryBlockchain: chains[0], // First selected chain is primary
           createdAt: new Date().toISOString(),
           userId: currentUserId,
         },

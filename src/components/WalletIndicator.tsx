@@ -23,9 +23,11 @@ export default function WalletIndicator() {
       className="flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-purple-50 px-4 py-2 rounded-lg hover:from-blue-100 hover:to-purple-100 transition-all"
     >
       <span className="text-lg">
-        {activeWallet.primaryBlockchain === 'Ethereum' ? '🟢' :
-         activeWallet.primaryBlockchain === 'Bitcoin' ? '🟠' :
-         activeWallet.primaryBlockchain === 'Solana' ? '🟣' : '⚪'}
+        {activeWallet.primaryBlockchain === 'ethereum' ? '⟠' :
+         activeWallet.primaryBlockchain === 'polygon' ? '⬡' :
+         activeWallet.primaryBlockchain === 'arbitrum' ? '🔷' :
+         activeWallet.primaryBlockchain === 'base' ? '🔵' :
+         activeWallet.primaryBlockchain === 'optimism' ? '🔴' : '⚪'}
       </span>
       <div className="text-left">
         <p className="text-xs font-medium text-gray-700">{activeWallet.name}</p>

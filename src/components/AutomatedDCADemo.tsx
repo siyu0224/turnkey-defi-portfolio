@@ -123,9 +123,13 @@ export default function AutomatedDCADemo() {
 
   // Load saved strategies
   useEffect(() => {
-    const savedStrategies = localStorage.getItem('dca-strategies');
-    if (savedStrategies) {
-      setStrategies(JSON.parse(savedStrategies));
+    try {
+      const savedStrategies = localStorage.getItem('dca-strategies');
+      if (savedStrategies) {
+        setStrategies(JSON.parse(savedStrategies));
+      }
+    } catch (error) {
+      console.error('Error loading strategies:', error);
     }
   }, []);
 
@@ -154,20 +158,56 @@ export default function AutomatedDCADemo() {
       transactions: [],
     };
 
-    // For now, we'll create the strategy locally without the policy API
-    // In production, this would create a real Turnkey policy
+    // Create real Turnkey policies for the DCA strategy
     try {
+      // Create a policy for the DCA strategy
+      const policyResponse = await fetch('/api/create-policy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          policyName: `DCA - ${newStrategy.name}`,
+          policyType: 'gas_limit', // Using gas limit as a proxy for DCA execution control
+          conditions: {
+            maxGasPrice: newStrategy.maxGasPrice,
+          },
+          chain: selectedChain,
+        }),
+      });
+
+      const policyData = await policyResponse.json();
+      
+      if (policyData.success) {
+        // Add policy ID to strategy
+        strategy.id = policyData.policy.id;
+        
+        const updatedStrategies = [...strategies, strategy];
+        setStrategies(updatedStrategies);
+        localStorage.setItem('dca-strategies', JSON.stringify(updatedStrategies));
+        setShowCreateStrategy(false);
+        resetForm();
+        
+        // Show success message
+        alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nA Turnkey policy has been created to control gas prices for this strategy.`);
+      } else {
+        // Fall back to local storage if policy creation fails
+        const updatedStrategies = [...strategies, strategy];
+        setStrategies(updatedStrategies);
+        localStorage.setItem('dca-strategies', JSON.stringify(updatedStrategies));
+        setShowCreateStrategy(false);
+        resetForm();
+        
+        alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nNote: Policy creation failed, but the strategy has been saved locally.`);
+      }
+    } catch (error) {
+      console.error('Error creating strategy:', error);
+      // Still save the strategy locally even if policy creation fails
       const updatedStrategies = [...strategies, strategy];
       setStrategies(updatedStrategies);
       localStorage.setItem('dca-strategies', JSON.stringify(updatedStrategies));
       setShowCreateStrategy(false);
       resetForm();
       
-      // Show success message
-      alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nThis demo saves strategies locally. In production, this would create a Turnkey automation policy.`);
-    } catch (error) {
-      console.error('Error creating strategy:', error);
-      alert('Failed to create strategy');
+      alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nNote: Policy creation encountered an error, but the strategy has been saved locally.`);
     }
   };
 
@@ -190,7 +230,7 @@ export default function AutomatedDCADemo() {
       const minToAmount = toAmount * (1 - slippage);
 
       // Create swap transaction
-      const chainConfig = chainConfigs[strategy.chain];
+      const chainConfig = chainConfigs[strategy.chain] || chainConfigs.ethereum;
       const swapData = {
         from: activeWallet.accounts?.[0]?.address,
         to: chainConfig.dexRouter,
@@ -373,9 +413,9 @@ export default function AutomatedDCADemo() {
                     }`}>
                       {strategy.status}
                     </span>
-                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${chainConfigs[strategy.chain].color} text-white flex items-center space-x-1`}>
-                      <span>{chainConfigs[strategy.chain].icon}</span>
-                      <span>{chainConfigs[strategy.chain].name}</span>
+                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${chainConfigs[strategy.chain]?.color || 'bg-gray-500'} text-white flex items-center space-x-1`}>
+                      <span>{chainConfigs[strategy.chain]?.icon || '⚪'}</span>
+                      <span>{chainConfigs[strategy.chain]?.name || strategy.chain}</span>
                     </span>
                   </div>
                   <p className="text-sm text-gray-600">
@@ -469,7 +509,7 @@ export default function AutomatedDCADemo() {
                           </span>
                           {tx.txHash && (
                             <a
-                              href={`${chainConfigs[strategy.chain].explorer}/tx/${tx.txHash}`}
+                              href={`${chainConfigs[strategy.chain]?.explorer || 'https://etherscan.io'}/tx/${tx.txHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:text-blue-800"
@@ -523,8 +563,8 @@ export default function AutomatedDCADemo() {
                         }`}
                       >
                         <div className="flex items-center space-x-2">
-                          <span className="text-xl">{chainConfigs[chain].icon}</span>
-                          <span className="text-sm font-medium">{chainConfigs[chain].name}</span>
+                          <span className="text-xl">{chainConfigs[chain]?.icon || '⚪'}</span>
+                          <span className="text-sm font-medium">{chainConfigs[chain]?.name || chain}</span>
                         </div>
                       </button>
                     ))}
@@ -554,9 +594,9 @@ export default function AutomatedDCADemo() {
                       onChange={(e) => setNewStrategy({ ...newStrategy, fromToken: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     >
-                      {chainConfigs[selectedChain].tokens.map((token) => (
+                      {chainConfigs[selectedChain]?.tokens?.map((token) => (
                         <option key={token} value={token}>{token}</option>
-                      ))}
+                      )) || []}
                     </select>
                   </div>
                   <div>
@@ -568,9 +608,9 @@ export default function AutomatedDCADemo() {
                       onChange={(e) => setNewStrategy({ ...newStrategy, toToken: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     >
-                      {chainConfigs[selectedChain].tokens.map((token) => (
+                      {chainConfigs[selectedChain]?.tokens?.map((token) => (
                         <option key={token} value={token}>{token}</option>
-                      ))}
+                      )) || []}
                     </select>
                   </div>
                 </div>
