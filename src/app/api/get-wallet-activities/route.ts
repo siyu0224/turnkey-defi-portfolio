@@ -36,17 +36,23 @@ export async function POST(request: NextRequest) {
     let creatorDetails = null;
 
     if (walletCreationActivity) {
-      creatorUserId = walletCreationActivity.userId;
+      // The user ID might be in the activity's metadata or we need to check who initiated it
+      creatorUserId = (walletCreationActivity as any).userId || 
+                     (walletCreationActivity as any).initiatorUserId || 
+                     (walletCreationActivity as any).createdBy ||
+                     null;
       
-      // Try to get user details
-      try {
-        const userResponse = await turnkeyClient.getUser({
-          organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
-          userId: creatorUserId,
-        });
-        creatorDetails = userResponse.user;
-      } catch (error) {
-        console.log("Could not fetch user details:", error);
+      // Try to get user details if we found a userId
+      if (creatorUserId) {
+        try {
+          const userResponse = await turnkeyClient.getUser({
+            organizationId: process.env.TURNKEY_ORGANIZATION_ID!,
+            userId: creatorUserId,
+          });
+          creatorDetails = userResponse.user;
+        } catch (error) {
+          console.log("Could not fetch user details:", error);
+        }
       }
     }
 
