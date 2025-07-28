@@ -1,4 +1,5 @@
 import { TurnkeyClient } from "@turnkey/http";
+import { checkPolicyFeatureAvailable } from "./check-policy-feature";
 
 // Turnkey blockchain constants
 const BLOCKCHAIN_MAPPING = {
@@ -18,6 +19,19 @@ export async function createWalletPolicies(
 ) {
   const createdPolicies = [];
   const errors = [];
+
+  // Check if policy feature is available
+  const policyFeatureAvailable = await checkPolicyFeatureAvailable(turnkeyClient, organizationId);
+  
+  if (!policyFeatureAvailable) {
+    console.log("Policy feature not available for this organization");
+    return {
+      success: false,
+      policies: [],
+      errors: [{ error: "Policy feature not available or not enabled for this organization" }],
+      totalCreated: 0,
+    };
+  }
 
   // Create default policies for each chain
   for (const chain of chains) {

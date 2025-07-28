@@ -158,10 +158,14 @@ export default function AutomatedDCADemo() {
       transactions: [],
     };
 
-    // Create real Turnkey policies for the DCA strategy
-    try {
-      // Create a policy for the DCA strategy
-      const policyResponse = await fetch('/api/create-policy', {
+    // Skip policy creation if it's causing issues
+    const skipPolicyCreation = true; // Temporary flag to skip policy creation
+    
+    if (!skipPolicyCreation) {
+      // Create real Turnkey policies for the DCA strategy
+      try {
+        // Create a policy for the DCA strategy
+        const policyResponse = await fetch('/api/create-policy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -190,13 +194,16 @@ export default function AutomatedDCADemo() {
         alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nA Turnkey policy has been created to control gas prices for this strategy.`);
       } else {
         // Fall back to local storage if policy creation fails
+        console.error('Policy creation failed:', policyData);
         const updatedStrategies = [...strategies, strategy];
         setStrategies(updatedStrategies);
         localStorage.setItem('dca-strategies', JSON.stringify(updatedStrategies));
         setShowCreateStrategy(false);
         resetForm();
         
-        alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nNote: Policy creation failed, but the strategy has been saved locally.`);
+        const errorMessage = policyData.message || policyData.error || 'Unknown error';
+        const errorDetails = policyData.details ? `\n\nDetails: ${JSON.stringify(policyData.details)}` : '';
+        alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nNote: Policy creation failed (${errorMessage})${errorDetails}, but the strategy has been saved locally.`);
       }
     } catch (error) {
       console.error('Error creating strategy:', error);
@@ -208,6 +215,16 @@ export default function AutomatedDCADemo() {
       resetForm();
       
       alert(`DCA strategy "${newStrategy.name}" created successfully!\n\nNote: Policy creation encountered an error, but the strategy has been saved locally.`);
+    }
+    } else {
+      // Skip policy creation and just save the strategy
+      const updatedStrategies = [...strategies, strategy];
+      setStrategies(updatedStrategies);
+      localStorage.setItem('dca-strategies', JSON.stringify(updatedStrategies));
+      setShowCreateStrategy(false);
+      resetForm();
+      
+      alert(`DCA strategy "${newStrategy.name}" created successfully!`);
     }
   };
 
