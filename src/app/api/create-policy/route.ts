@@ -4,7 +4,7 @@ import { ApiKeyStamper } from "@turnkey/api-key-stamper";
 
 export async function POST(request: NextRequest) {
   try {
-    const { policyName, policyType, conditions } = await request.json();
+    const { policyName, policyType, conditions, chain } = await request.json();
 
     if (!policyName || !policyType || !conditions) {
       return NextResponse.json(
@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
         id: policyResponse.activity.id,
         name: policyName,
         type: policyType,
+        chain: chain || 'all',
         status: "active",
         createdAt: new Date().toISOString(),
       },

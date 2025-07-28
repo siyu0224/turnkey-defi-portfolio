@@ -10,6 +10,7 @@ interface AutomationPolicy {
   name: string;
   type: 'spending_limit' | 'gas_limit' | 'address_allowlist' | 'time_based' | 'dca' | 'custom';
   status: 'active' | 'paused' | 'completed';
+  chain?: 'ethereum' | 'polygon' | 'arbitrum' | 'base' | 'optimism' | 'all';
   createdAt?: string;
   updatedAt?: string;
   notes?: string;
@@ -33,6 +34,7 @@ export default function TransactionAutomation() {
   const [policiesLoading, setPoliciesLoading] = useState(true);
   const [selectedPolicyType, setSelectedPolicyType] = useState<'spending_limit' | 'gas_limit' | 'address_allowlist' | 'time_based'>('spending_limit');
   const [activeView, setActiveView] = useState<'policies' | 'dca-demo'>('policies');
+  const [selectedChain, setSelectedChain] = useState<'ethereum' | 'polygon' | 'arbitrum' | 'base' | 'optimism' | 'all'>('all');
   
   const [newPolicy, setNewPolicy] = useState({
     name: '',
@@ -43,6 +45,16 @@ export default function TransactionAutomation() {
     startHour: '9',
     endHour: '17',
   });
+
+  // Chain configurations
+  const chainConfigs = {
+    ethereum: { name: 'Ethereum', icon: '⟠', color: 'bg-blue-500' },
+    polygon: { name: 'Polygon', icon: '⬡', color: 'bg-purple-500' },
+    arbitrum: { name: 'Arbitrum', icon: '🔷', color: 'bg-blue-600' },
+    base: { name: 'Base', icon: '🔵', color: 'bg-blue-700' },
+    optimism: { name: 'Optimism', icon: '🔴', color: 'bg-red-500' },
+    all: { name: 'All Chains', icon: '🌐', color: 'bg-gray-500' },
+  };
 
   // Load existing policies
   useEffect(() => {
@@ -113,6 +125,7 @@ export default function TransactionAutomation() {
           policyName: newPolicy.name,
           policyType: selectedPolicyType,
           conditions: conditions,
+          chain: selectedChain,
         }),
       });
 
@@ -125,6 +138,7 @@ export default function TransactionAutomation() {
           name: data.policy.name,
           type: selectedPolicyType,
           status: 'active',
+          chain: selectedChain,
           createdAt: data.policy.createdAt,
           config: conditions,
         };
@@ -220,9 +234,9 @@ export default function TransactionAutomation() {
         <>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Transaction Automation Policies</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Multi-Chain Transaction Automation Policies</h3>
               <p className="text-sm text-gray-600 mt-1">
-                Powered by Turnkey&apos;s Policy Engine - Set rules to automate and control transactions
+                Powered by Turnkey&apos;s Policy Engine - Set cross-chain rules to automate and control transactions
               </p>
             </div>
             <button
@@ -288,6 +302,12 @@ export default function TransactionAutomation() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
+                  {policy.chain && (
+                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${chainConfigs[policy.chain].color} text-white flex items-center space-x-1`}>
+                      <span>{chainConfigs[policy.chain].icon}</span>
+                      <span>{chainConfigs[policy.chain].name}</span>
+                    </span>
+                  )}
                   <span className={`px-3 py-1 text-sm rounded-full font-medium ${
                     policy.status === 'active' 
                       ? 'bg-green-100 text-green-700' 
@@ -312,11 +332,12 @@ export default function TransactionAutomation() {
         <div className="flex items-start space-x-3">
           <div className="text-blue-600 mt-0.5">ℹ️</div>
           <div>
-            <h4 className="text-sm font-semibold text-blue-900">How Turnkey Policies Work</h4>
+            <h4 className="text-sm font-semibold text-blue-900">How Turnkey Multi-Chain Policies Work</h4>
             <p className="text-sm text-blue-800 mt-1">
-              Policies are evaluated server-side before any transaction is signed. They provide 
-              cryptographically verifiable rules that control when and how transactions can be executed, 
-              ensuring security without sacrificing automation capabilities.
+              Policies are evaluated server-side before any transaction is signed across all supported chains. 
+              They provide cryptographically verifiable rules that control when and how transactions can be 
+              executed on Ethereum, Polygon, Arbitrum, Base, and Optimism, ensuring security without sacrificing 
+              automation capabilities.
             </p>
           </div>
         </div>
@@ -351,6 +372,36 @@ export default function TransactionAutomation() {
               </div>
 
               <div className="space-y-6">
+                {/* Chain Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Select Chain
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(Object.keys(chainConfigs) as Array<keyof typeof chainConfigs>).map((chain) => (
+                      <button
+                        key={chain}
+                        onClick={() => setSelectedChain(chain)}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          selectedChain === chain
+                            ? 'border-purple-500 bg-purple-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xl">{chainConfigs[chain].icon}</span>
+                          <span className="text-sm font-medium">{chainConfigs[chain].name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {selectedChain === 'all' 
+                      ? 'Policy will apply to transactions on all supported chains'
+                      : `Policy will only apply to transactions on ${chainConfigs[selectedChain].name}`}
+                  </p>
+                </div>
+
                 {/* Policy Type Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -495,6 +546,9 @@ export default function TransactionAutomation() {
                       `Only transactions to ${newPolicy.allowedAddresses.split(',').filter(a => a.trim()).length} allowed addresses will be permitted.`}
                     {selectedPolicyType === 'time_based' && 
                       `Transactions will only be allowed between ${newPolicy.startHour}:00 and ${newPolicy.endHour}:00 UTC.`}
+                  </p>
+                  <p className="text-xs text-purple-700 mt-2">
+                    <strong>Chain:</strong> {chainConfigs[selectedChain].icon} {chainConfigs[selectedChain].name}
                   </p>
                 </div>
 

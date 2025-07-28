@@ -7,6 +7,7 @@ interface DCAStrategy {
   id: string;
   name: string;
   status: 'active' | 'paused' | 'completed';
+  chain: 'ethereum' | 'polygon' | 'arbitrum' | 'base' | 'optimism';
   config: {
     fromToken: string;
     toToken: string;
@@ -28,6 +29,7 @@ interface DCAStrategy {
     gasUsed: string;
     status: 'pending' | 'completed' | 'failed';
     txHash?: string;
+    chain: string;
   }[];
 }
 
@@ -41,6 +43,8 @@ export default function AutomatedDCADemo() {
   const [showSigningModal, setShowSigningModal] = useState(false);
   const [transactionToSign, setTransactionToSign] = useState<any>(null);
   
+  const [selectedChain, setSelectedChain] = useState<'ethereum' | 'polygon' | 'arbitrum' | 'base' | 'optimism'>('ethereum');
+  
   const [newStrategy, setNewStrategy] = useState({
     name: '',
     fromToken: 'USDC',
@@ -52,14 +56,69 @@ export default function AutomatedDCADemo() {
     totalBudget: '1000',
   });
 
-  // Token prices for simulation
+  // Chain configurations
+  const chainConfigs = {
+    ethereum: {
+      name: 'Ethereum',
+      icon: '⟠',
+      color: 'bg-blue-500',
+      explorer: 'https://etherscan.io',
+      tokens: ['ETH', 'USDC', 'DAI', 'UNI', 'LINK', 'WBTC'],
+      dexRouter: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45', // Uniswap V3
+    },
+    polygon: {
+      name: 'Polygon',
+      icon: '⬡',
+      color: 'bg-purple-500',
+      explorer: 'https://polygonscan.com',
+      tokens: ['MATIC', 'USDC', 'DAI', 'WETH', 'LINK', 'AAVE'],
+      dexRouter: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45', // Uniswap V3
+    },
+    arbitrum: {
+      name: 'Arbitrum',
+      icon: '🔷',
+      color: 'bg-blue-600',
+      explorer: 'https://arbiscan.io',
+      tokens: ['ETH', 'USDC', 'DAI', 'ARB', 'GMX', 'LINK'],
+      dexRouter: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45', // Uniswap V3
+    },
+    base: {
+      name: 'Base',
+      icon: '🔵',
+      color: 'bg-blue-700',
+      explorer: 'https://basescan.org',
+      tokens: ['ETH', 'USDC', 'DAI', 'cbETH', 'AERO', 'BRETT'],
+      dexRouter: '0x2626664c2603336E57B271c5C0b26F421741e481', // Uniswap V3
+    },
+    optimism: {
+      name: 'Optimism',
+      icon: '🔴',
+      color: 'bg-red-500',
+      explorer: 'https://optimistic.etherscan.io',
+      tokens: ['ETH', 'USDC', 'DAI', 'OP', 'SNX', 'LINK'],
+      dexRouter: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45', // Uniswap V3
+    },
+  };
+
+  // Token prices for simulation (chain-aware)
   const tokenPrices: Record<string, number> = {
     ETH: 2500,
+    WETH: 2500,
     BTC: 45000,
+    WBTC: 45000,
     USDC: 1,
     DAI: 1,
     UNI: 7,
     LINK: 11.4,
+    MATIC: 0.7,
+    ARB: 1.2,
+    OP: 2.3,
+    GMX: 35,
+    SNX: 3.2,
+    AAVE: 95,
+    cbETH: 2600,
+    AERO: 0.8,
+    BRETT: 0.05,
   };
 
   // Load saved strategies
@@ -85,6 +144,7 @@ export default function AutomatedDCADemo() {
       id: `dca-${Date.now()}`,
       name: newStrategy.name,
       status: 'active',
+      chain: selectedChain,
       config: {
         ...newStrategy,
         executedAmount: '0',
@@ -130,12 +190,14 @@ export default function AutomatedDCADemo() {
       const minToAmount = toAmount * (1 - slippage);
 
       // Create swap transaction
+      const chainConfig = chainConfigs[strategy.chain];
       const swapData = {
         from: activeWallet.accounts?.[0]?.address,
-        to: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45', // Uniswap V3 Router
+        to: chainConfig.dexRouter,
         data: encodeSwapData(strategy.config.fromToken, strategy.config.toToken, fromAmount),
-        value: strategy.config.fromToken === 'ETH' ? `${fromAmount * 1e18}` : '0',
+        value: strategy.config.fromToken === 'ETH' || strategy.config.fromToken === 'MATIC' ? `${fromAmount * 1e18}` : '0',
         gasPrice: `${parseFloat(strategy.config.maxGasPrice) * 1e9}`,
+        chain: strategy.chain,
       };
 
       if (simulationMode) {
@@ -150,6 +212,7 @@ export default function AutomatedDCADemo() {
           gasUsed: '150000',
           status: 'completed' as const,
           txHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+          chain: strategy.chain,
         };
 
         // Update strategy
@@ -260,9 +323,9 @@ export default function AutomatedDCADemo() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg p-6 text-white">
-        <h3 className="text-2xl font-bold mb-2">Automated DCA Trading</h3>
+        <h3 className="text-2xl font-bold mb-2">Multi-Chain Automated DCA Trading</h3>
         <p className="text-purple-100 mb-4">
-          Set up automated dollar-cost averaging strategies with transaction signing
+          Set up cross-chain automated trading strategies with Turnkey's policy engine
         </p>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
@@ -309,6 +372,10 @@ export default function AutomatedDCADemo() {
                       'bg-gray-100 text-gray-700'
                     }`}>
                       {strategy.status}
+                    </span>
+                    <span className={`px-2 py-1 text-xs rounded-full font-medium ${chainConfigs[strategy.chain].color} text-white flex items-center space-x-1`}>
+                      <span>{chainConfigs[strategy.chain].icon}</span>
+                      <span>{chainConfigs[strategy.chain].name}</span>
                     </span>
                   </div>
                   <p className="text-sm text-gray-600">
@@ -402,7 +469,7 @@ export default function AutomatedDCADemo() {
                           </span>
                           {tx.txHash && (
                             <a
-                              href={`https://etherscan.io/tx/${tx.txHash}`}
+                              href={`${chainConfigs[strategy.chain].explorer}/tx/${tx.txHash}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:text-blue-800"
@@ -442,6 +509,30 @@ export default function AutomatedDCADemo() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Chain
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(Object.keys(chainConfigs) as Array<keyof typeof chainConfigs>).map((chain) => (
+                      <button
+                        key={chain}
+                        onClick={() => setSelectedChain(chain)}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          selectedChain === chain
+                            ? 'border-purple-500 bg-purple-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xl">{chainConfigs[chain].icon}</span>
+                          <span className="text-sm font-medium">{chainConfigs[chain].name}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Strategy Name
                   </label>
                   <input
@@ -463,9 +554,9 @@ export default function AutomatedDCADemo() {
                       onChange={(e) => setNewStrategy({ ...newStrategy, fromToken: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     >
-                      <option value="USDC">USDC</option>
-                      <option value="DAI">DAI</option>
-                      <option value="ETH">ETH</option>
+                      {chainConfigs[selectedChain].tokens.map((token) => (
+                        <option key={token} value={token}>{token}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -477,10 +568,9 @@ export default function AutomatedDCADemo() {
                       onChange={(e) => setNewStrategy({ ...newStrategy, toToken: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     >
-                      <option value="ETH">ETH</option>
-                      <option value="BTC">BTC</option>
-                      <option value="UNI">UNI</option>
-                      <option value="LINK">LINK</option>
+                      {chainConfigs[selectedChain].tokens.map((token) => (
+                        <option key={token} value={token}>{token}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -650,6 +740,7 @@ export default function AutomatedDCADemo() {
                           message: transactionToSign.message,
                           walletId: activeWallet!.id,
                           address: activeWallet!.accounts?.[0]?.address,
+                          chain: transactionToSign.strategy.chain,
                         }),
                       });
 
@@ -665,6 +756,7 @@ export default function AutomatedDCADemo() {
                           gasUsed: '150000',
                           status: 'completed' as const,
                           txHash: signData.signature?.slice(0, 66),
+                          chain: transactionToSign.strategy.chain,
                         };
 
                         const updatedStrategy = {

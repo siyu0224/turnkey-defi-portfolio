@@ -4,11 +4,12 @@ import { ApiKeyStamper } from "@turnkey/api-key-stamper";
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, address, walletId } = await request.json();
+    const { message, address, walletId, chain } = await request.json();
 
     console.log("Signing message:", message);
     console.log("With address:", address);
     console.log("Wallet ID:", walletId);
+    console.log("Chain:", chain || "ethereum");
 
     const stamper = new ApiKeyStamper({
       apiPublicKey: process.env.TURNKEY_API_PUBLIC_KEY!,
