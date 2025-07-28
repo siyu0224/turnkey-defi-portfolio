@@ -104,8 +104,8 @@ export default function Dashboard() {
   const loadWallets = useCallback(async () => {
     setWalletsLoading(true);
     try {
-      // First try simple list without details
-      const response = await fetch('/api/list-wallets-simple', {
+      // Use basic API that doesn't fetch addresses
+      const response = await fetch('/api/list-wallets-basic', {
         method: 'POST',
       });
       const data = await response.json();
