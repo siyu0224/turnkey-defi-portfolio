@@ -48,14 +48,14 @@ export async function POST(request: NextRequest) {
     });
     const currentUserId = whoamiResponse.userId;
 
-    // Create accounts for each selected chain
-    const accounts = chains.map((chain: keyof typeof BLOCKCHAIN_MAPPING) => ({
-      curve: "CURVE_SECP256K1",
-      pathFormat: "PATH_FORMAT_BIP32",
+    // Create a single account that works across all EVM chains
+    // EVM chains share the same address format
+    const accounts = [{
+      curve: "CURVE_SECP256K1" as const,
+      pathFormat: "PATH_FORMAT_BIP32" as const,
       path: "m/44'/60'/0'/0/0", // Standard Ethereum derivation path
-      addressFormat: "ADDRESS_FORMAT_ETHEREUM",
-      blockchain: BLOCKCHAIN_MAPPING[chain] || "BLOCKCHAIN_ETHEREUM",
-    }));
+      addressFormat: "ADDRESS_FORMAT_ETHEREUM" as const,
+    }];
 
     // Use activity poller to ensure wallet creation completes
     const activityPoller = createActivityPoller({
